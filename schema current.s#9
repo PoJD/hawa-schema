@@ -1661,6 +1661,10 @@ Types 233 and 234&lt;p&gt;
 <wire x1="165.1" y1="139.7" x2="154.94" y2="139.7" width="0.1524" layer="91"/>
 <label x="157.48" y="139.7" size="1.778" layer="95"/>
 </segment>
+<segment>
+<pinref part="MCP3008-CS0" gate="G$1" pin="MOSI"/>
+<wire x1="-58.42" y1="83.82" x2="-58.42" y2="81.28" width="0.1524" layer="91"/>
+</segment>
 </net>
 <net name="MISO\" class="0">
 <segment>
@@ -1761,12 +1765,20 @@ Types 233 and 234&lt;p&gt;
 <wire x1="165.1" y1="134.62" x2="154.94" y2="134.62" width="0.1524" layer="91"/>
 <label x="157.48" y="134.62" size="1.778" layer="95"/>
 </segment>
+<segment>
+<pinref part="MCP3008-CS0" gate="G$1" pin="SCK"/>
+<wire x1="-55.88" y1="83.82" x2="-55.88" y2="81.28" width="0.1524" layer="91"/>
+</segment>
 </net>
 <net name="CS0" class="0">
 <segment>
 <pinref part="RASPBERRY" gate="G$1" pin="B-6"/>
 <wire x1="165.1" y1="132.08" x2="154.94" y2="132.08" width="0.1524" layer="91"/>
 <label x="157.48" y="132.08" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="MCP3008-CS0" gate="G$1" pin="!CS"/>
+<wire x1="-60.96" y1="83.82" x2="-60.96" y2="81.28" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$1" class="0">
@@ -2438,6 +2450,12 @@ Types 233 and 234&lt;p&gt;
 <pinref part="MCP3008-CS0" gate="G$1" pin="CH7"/>
 <pinref part="ANALOG" gate="G$1" pin="B-9"/>
 <wire x1="-76.2" y1="88.9" x2="-99.06" y2="88.9" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="MISO" class="0">
+<segment>
+<pinref part="MCP3008-CS0" gate="G$1" pin="MISO"/>
+<wire x1="-53.34" y1="83.82" x2="-53.34" y2="81.28" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>

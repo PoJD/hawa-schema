@@ -2505,6 +2505,94 @@ Types 233 and 234&lt;p&gt;
 <label x="7.62" y="60.96" size="1.778" layer="95"/>
 </segment>
 </net>
+<net name="N$73" class="0">
+<segment>
+<pinref part="MCP3008-CS1" gate="G$1" pin="CH0"/>
+<wire x1="-15.24" y1="88.9" x2="-43.18" y2="88.9" width="0.1524" layer="91"/>
+<wire x1="-43.18" y1="88.9" x2="-43.18" y2="78.74" width="0.1524" layer="91"/>
+<wire x1="-43.18" y1="78.74" x2="-76.2" y2="78.74" width="0.1524" layer="91"/>
+<wire x1="-76.2" y1="78.74" x2="-76.2" y2="86.36" width="0.1524" layer="91"/>
+<pinref part="ANALOG" gate="G$1" pin="B-8"/>
+<wire x1="-76.2" y1="86.36" x2="-99.06" y2="86.36" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$74" class="0">
+<segment>
+<pinref part="MCP3008-CS1" gate="G$1" pin="CH1"/>
+<wire x1="-15.24" y1="86.36" x2="-40.64" y2="86.36" width="0.1524" layer="91"/>
+<wire x1="-40.64" y1="86.36" x2="-40.64" y2="76.2" width="0.1524" layer="91"/>
+<wire x1="-40.64" y1="76.2" x2="-78.74" y2="76.2" width="0.1524" layer="91"/>
+<wire x1="-78.74" y1="76.2" x2="-78.74" y2="83.82" width="0.1524" layer="91"/>
+<pinref part="ANALOG" gate="G$1" pin="B-7"/>
+<wire x1="-78.74" y1="83.82" x2="-99.06" y2="83.82" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$75" class="0">
+<segment>
+<pinref part="MCP3008-CS1" gate="G$1" pin="CH2"/>
+<wire x1="-15.24" y1="83.82" x2="-38.1" y2="83.82" width="0.1524" layer="91"/>
+<wire x1="-38.1" y1="83.82" x2="-38.1" y2="73.66" width="0.1524" layer="91"/>
+<wire x1="-38.1" y1="73.66" x2="-81.28" y2="73.66" width="0.1524" layer="91"/>
+<wire x1="-81.28" y1="73.66" x2="-81.28" y2="81.28" width="0.1524" layer="91"/>
+<pinref part="ANALOG" gate="G$1" pin="B-6"/>
+<wire x1="-81.28" y1="81.28" x2="-99.06" y2="81.28" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$76" class="0">
+<segment>
+<pinref part="MCP3008-CS1" gate="G$1" pin="CH3"/>
+<wire x1="-15.24" y1="81.28" x2="-35.56" y2="81.28" width="0.1524" layer="91"/>
+<wire x1="-35.56" y1="81.28" x2="-35.56" y2="71.12" width="0.1524" layer="91"/>
+<wire x1="-35.56" y1="71.12" x2="-83.82" y2="71.12" width="0.1524" layer="91"/>
+<wire x1="-83.82" y1="71.12" x2="-83.82" y2="78.74" width="0.1524" layer="91"/>
+<pinref part="ANALOG" gate="G$1" pin="B-5"/>
+<wire x1="-83.82" y1="78.74" x2="-99.06" y2="78.74" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$77" class="0">
+<segment>
+<pinref part="MCP3008-CS1" gate="G$1" pin="CH4"/>
+<wire x1="-15.24" y1="78.74" x2="-33.02" y2="78.74" width="0.1524" layer="91"/>
+<wire x1="-33.02" y1="78.74" x2="-33.02" y2="68.58" width="0.1524" layer="91"/>
+<wire x1="-33.02" y1="68.58" x2="-86.36" y2="68.58" width="0.1524" layer="91"/>
+<wire x1="-86.36" y1="68.58" x2="-86.36" y2="76.2" width="0.1524" layer="91"/>
+<pinref part="ANALOG" gate="G$1" pin="B-4"/>
+<wire x1="-86.36" y1="76.2" x2="-99.06" y2="76.2" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$78" class="0">
+<segment>
+<pinref part="MCP3008-CS1" gate="G$1" pin="CH5"/>
+<wire x1="-15.24" y1="76.2" x2="-30.48" y2="76.2" width="0.1524" layer="91"/>
+<wire x1="-30.48" y1="76.2" x2="-30.48" y2="66.04" width="0.1524" layer="91"/>
+<wire x1="-30.48" y1="66.04" x2="-88.9" y2="66.04" width="0.1524" layer="91"/>
+<wire x1="-88.9" y1="66.04" x2="-88.9" y2="73.66" width="0.1524" layer="91"/>
+<pinref part="ANALOG" gate="G$1" pin="B-3"/>
+<wire x1="-88.9" y1="73.66" x2="-99.06" y2="73.66" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$79" class="0">
+<segment>
+<pinref part="MCP3008-CS1" gate="G$1" pin="CH6"/>
+<wire x1="-15.24" y1="73.66" x2="-27.94" y2="73.66" width="0.1524" layer="91"/>
+<wire x1="-27.94" y1="73.66" x2="-27.94" y2="63.5" width="0.1524" layer="91"/>
+<wire x1="-27.94" y1="63.5" x2="-91.44" y2="63.5" width="0.1524" layer="91"/>
+<wire x1="-91.44" y1="63.5" x2="-91.44" y2="71.12" width="0.1524" layer="91"/>
+<pinref part="ANALOG" gate="G$1" pin="B-2"/>
+<wire x1="-91.44" y1="71.12" x2="-99.06" y2="71.12" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$80" class="0">
+<segment>
+<pinref part="MCP3008-CS1" gate="G$1" pin="CH7"/>
+<wire x1="-15.24" y1="71.12" x2="-25.4" y2="71.12" width="0.1524" layer="91"/>
+<wire x1="-25.4" y1="71.12" x2="-25.4" y2="60.96" width="0.1524" layer="91"/>
+<wire x1="-25.4" y1="60.96" x2="-93.98" y2="60.96" width="0.1524" layer="91"/>
+<wire x1="-93.98" y1="60.96" x2="-93.98" y2="68.58" width="0.1524" layer="91"/>
+<pinref part="ANALOG" gate="G$1" pin="B-1"/>
+<wire x1="-93.98" y1="68.58" x2="-99.06" y2="68.58" width="0.1524" layer="91"/>
+</segment>
+</net>
 </nets>
 </sheet>
 </sheets>

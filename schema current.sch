@@ -6,7 +6,7 @@
 <setting alwaysvectorfont="no"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="yes" altdistance="0.01" altunitdist="inch" altunit="inch"/>
+<grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="no" active="no"/>
 <layer number="16" name="Bottom" color="1" fill="1" visible="no" active="no"/>
@@ -1313,8 +1313,8 @@ Types 233 and 234&lt;p&gt;
 <sheets>
 <sheet>
 <plain>
-<text x="-58.42" y="96.52" size="1.778" layer="91">CS0</text>
-<text x="2.54" y="78.74" size="1.778" layer="91">CS1</text>
+<text x="-60.96" y="96.52" size="1.778" layer="91">CS0</text>
+<text x="0" y="78.74" size="1.778" layer="91">CS1</text>
 </plain>
 <instances>
 <instance part="MCP3008-CS1" gate="G$1" x="-2.54" y="78.74"/>
