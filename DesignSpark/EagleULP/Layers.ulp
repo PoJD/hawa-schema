@@ -1,0 +1,76 @@
+//Eagle Intermediate Format Layer Routines
+
+char LayerFormStarted=false;
+
+int LayerMapping[] = {-1,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,-1,-1,-1,17,18,19,-1,-1,18,19,18,19,20,21,22,23,
+                      24,25,26,27,28,29,1,16,1,16,0,-1,-1,30,30,30,30,-1,31,32};
+                      
+int LayerFilling[];
+
+int MapLayer(int LayerNumber)
+{
+	int Number;
+	if (LayerNumber <= 52)
+	{
+		Number = LayerMapping[LayerNumber];
+	}
+	else
+	{
+		Number = LayerNumber;
+	}
+	return(Number);
+}
+
+char IsKeepoutLayer(int LayerNumber)
+{
+	char Is=false;
+	if (LayerNumber>=39 &&
+	    LayerNumber<=43)
+	{
+		Is=true;
+	}
+	return(Is);
+}
+
+string KeepoutType(int LayerNumber)
+{
+	string Type;
+	if (LayerNumber==39 || LayerNumber==40)
+	{
+		Type = "Comp";
+	}
+	else
+	if (LayerNumber==41 || LayerNumber==42)
+	{
+		Type = "Track";
+	}
+	else
+	if (LayerNumber==43)
+	{
+		Type = "Via";
+	}
+	return(Type);
+}
+
+void StartLayerContentsForm(UL_LAYER Layer)
+{
+	if (!LayerFormStarted)
+	{
+		OpenForm("layerContents",true);
+		OpenForm("layerNumRef",false);
+		WriteInt(MapLayer(Layer.number));
+		CloseForm(false);
+		WriteLine();
+		LayerFormStarted = true;
+	}
+}
+
+void SetLayerFilling(int LayerNumber, int Fill)
+{
+	LayerFilling[LayerNumber]=Fill;
+}
+
+int GetLayerFilling(int LayerNumber)
+{
+	return(LayerFilling[LayerNumber]);
+}

@@ -1,0 +1,1195 @@
+// Eagle Schematic to Intermediate format
+
+#include "Output.ulp"
+
+#include "Styles.ulp"
+
+#include "Layers.ulp"
+
+#include "ShapesText.ulp"
+
+#include "Symbols.ulp"
+
+#include "Footprints.ulp"
+
+#include "Parts.ulp"
+
+void TextStyles(void)
+{
+	schematic(Schematic)
+	{
+		Schematic.libraries(Library)
+		{
+			Library.symbols(Symbol)
+			{
+				SymbolTextStyles(Symbol);
+			}
+		}
+		Schematic.sheets(Sheet)
+		{
+			Sheet.texts(Text)
+			{
+				TextStyle(Text);
+			}
+			Sheet.nets(Net)
+			{
+				Net.segments(SubNet)
+				{
+					SubNet.texts(NetName)
+					{
+						TextStyle(NetName);
+					}
+				}
+			}
+		}
+		Schematic.parts(Component)
+		{
+			Component.instances(Instance)
+			{
+				Instance.texts(Text)
+				{
+					TextStyle(Text);
+				}
+
+				Instance.attributes(Attr)
+				{
+					TextStyle(Attr.text);
+				}
+
+				Instance.gate.symbol.pins(Pin)
+				{
+					Pin.texts(PinText)
+					{
+						TextStyle(PinText);
+					}
+				}
+			}
+		}
+	}
+
+	OutputTextStyles();
+
+}
+
+void Symbols(void)
+{
+	schematic(Schematic)
+	{
+		Schematic.libraries(Library)
+		{
+			Library.symbols(Symbol)
+			{
+				string SymbolName=Symbol.name;
+				string LibraryName=Symbol.library;
+				char Found=false;
+				char IncludeLibraryName=false;
+				int i;
+				for (i=0;
+					(i<NumberSymbols) &&!Found;
+					i++)
+				{
+					if (SymbolNames[i]==SymbolName)
+					{
+						if (SymbolLibraryNames[i]==LibraryName)
+						{
+							Found = true;
+						}
+						else
+						{
+							IncludeLibraryName=true;
+							HaveDuplicateSymbolNames=true;
+						}
+					}
+				}
+				if (!Found)
+				{
+					SymbolLibraryNames[NumberSymbols]=LibraryName;
+					SymbolNames[NumberSymbols++]=SymbolName;
+					SymbolForm(Symbol,IncludeLibraryName);
+				}
+			}
+		}
+	}
+}
+
+numeric string ComponentPartNames[];
+
+void Parts(void)
+{	
+	schematic(Schematic)
+	{
+		Schematic.parts(Part)
+		{
+			string PartName=Part.device.name;
+			string LibraryName=Part.device.library;
+			char Found=false;
+			char IncludeLibraryName=false;
+			int i;
+			for (i=0;
+				 (i<NumberParts) &&!Found;
+				 i++)
+			{
+				if (PartNames[i]==PartName)
+				{
+					if (LibraryNames[i]==LibraryName)
+					{
+						Found = true;
+					}
+					else
+					{
+						IncludeLibraryName=true;
+					}
+				}
+			}
+			if (!Found)
+			{
+				LibraryNames[NumberParts]=LibraryName;
+				PartNames[NumberParts++]=PartName;
+				PartForm(Part.device,"",IncludeLibraryName,"");
+			}
+			if (IncludeLibraryName)
+			{
+				ComponentPartNames[NumberComponents++]=PartName+LibraryName;
+			}
+			else
+			{
+				ComponentPartNames[NumberComponents++]=PartName;
+			}
+		}
+	}
+}
+
+void LibraryForm()
+{
+	OpenForm("library",true);
+	WriteString("Library_1");
+	WriteLine();
+	TextStyles();
+	Symbols();
+	Parts();
+	CloseForm(true);
+}
+
+void HeaderForm()
+{
+	schematic(Schematic)
+	{
+		Units = Schematic.grid.unit;
+
+		WriteString("EAGLE_INTERMEDIATE_ASCII");
+		WriteQuotedString(Schematic.name);
+		WriteLine();
+		WriteLine();
+
+		OpenForm("asciiHeader",true);
+		WriteLine();
+
+		OpenForm("fileUnits",false);
+		if (Schematic.grid.unit==GRID_UNIT_MM)
+		{
+			WriteString("MM");
+		}
+		else
+		if (Schematic.grid.unit==GRID_UNIT_MIL)
+		{
+			WriteString("MIL");
+		}
+		else
+		if (Schematic.grid.unit==GRID_UNIT_INCH)
+		{
+			WriteString("IN");
+		}
+		else
+		if (Schematic.grid.unit==GRID_UNIT_MIC)
+		{
+			WriteString("MIC");
+		}
+		CloseForm(false);
+		WriteLine();
+
+		CloseForm(true);
+	}
+}
+
+void Components()
+{
+	int ComponentIndex=0;
+	schematic(Schematic)
+	{
+		Schematic.parts(Component)
+		{
+			OpenForm("compInst",true);
+			WriteQuotedString(Component.name);
+			WriteLine();
+
+			OpenForm("compRef",false);
+			WriteQuotedString(ComponentPartNames[ComponentIndex]);
+			CloseForm(false);
+			WriteLine();
+
+			OpenForm("compValue",false);
+			WriteQuotedString(Component.value);
+			CloseForm(false);
+			WriteLine();
+
+			CloseForm(true);
+			ComponentIndex++;
+		}
+	}
+}
+
+string GetContactName(UL_PINREF Pin, string PinName, string gateName)
+{
+	char DoneIt=false;
+	string Name;
+	UL_DEVICE Device=Pin.part.device;
+	
+	Device.gates(Gate)
+	{
+		if (!DoneIt)
+		{
+			if (Gate.name==gateName)
+			{
+				UL_SYMBOL Symbol=Gate.symbol;
+				Symbol.pins(Pin)
+				{
+					if (!DoneIt)
+					{
+						if (Pin.name==PinName)
+						{
+							char First=true;
+							Pin.contacts(Pad)
+							{
+								if (!First)
+								{
+									Name=Name+",";
+								}
+								Name=Name+Pad.name;
+								First=false;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return(Name);
+}
+
+void NodeForm(UL_PINREF Node)
+{
+	OpenForm("node",false);
+	WriteQuotedString(Node.part.name);
+	if (EAGLE_VERSION>=6)
+	{
+		string NodePinName=GetContactName(Node,Node.pin.name,Node.instance.gate.name);
+		if (!strlen(NodePinName))
+		{
+			NodePinName="1";
+		}
+		WriteQuotedString(NodePinName);
+	}
+	else
+	{
+		if (Node.pin.contact)
+		{
+			WriteQuotedString(Node.pin.contact.name);
+		}
+		else
+		{
+			WriteQuotedString("1");
+		}
+	}
+	CloseForm(false);
+	WriteLine();
+}
+
+
+void NetForm(UL_NET Net)
+{
+	OpenForm("net",true);
+	WriteQuotedString(Net.name);
+	WriteLine();
+	Net.pinrefs(Node)
+	{
+		NodeForm(Node);
+	}
+
+
+	//For some reason the power symbols are only held in the sheet iteration
+	//of the net
+	schematic(Schematic)
+	{
+		Schematic.sheets(Sheet)
+		{
+			Sheet.nets(SheetNet)
+			{
+				if (Net.name==SheetNet.name)
+				{
+					SheetNet.segments(SubNet)
+					{
+						SubNet.pinrefs(SheetNode)
+						{
+							if (EAGLE_VERSION>=6)
+							{
+								string NodePinName=GetContactName(SheetNode,SheetNode.pin.name,SheetNode.instance.gate.name);
+								if (strlen(NodePinName)==0)
+								{
+									NodeForm(SheetNode);
+								}
+							}
+							else
+							{
+								if (!SheetNode.pin.contact)
+								{
+									NodeForm(SheetNode);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	CloseForm(true);
+}
+
+void Nets()
+{
+	schematic(Schematic)
+	{
+		Schematic.nets(Net)
+		{
+			NetForm(Net);
+		}
+	}
+}
+
+void NetClassForm(UL_CLASS NetClass)
+{
+	if (strlen(NetClass.name))
+	{
+		OpenForm("netClass",true);
+		WriteQuotedString(NetClass.name);
+		WriteLine();
+		schematic(Schematic)
+		{
+			Schematic.nets(Net)
+			{
+				if (strlen(Net.class.name))
+				{
+					if (Net.class.name==NetClass.name)
+					{
+						OpenForm("netNameRef",false);
+						WriteQuotedString(Net.name);
+						CloseForm(false);
+						WriteLine();
+					}
+				}
+			}
+		}
+		if (NetClass.clearance)
+		{
+			OpenForm("attr",false);
+			WriteQuotedString("LineToLineClearance");
+			WriteLength(NetClass.clearance);
+			CloseForm(false);
+			WriteLine();
+			OpenForm("attr",false);
+			WriteQuotedString("PadToLineClearance");
+			WriteLength(NetClass.clearance);
+			CloseForm(false);
+			WriteLine();
+			OpenForm("attr",false);
+			WriteQuotedString("ViaToLineClearance");
+			WriteLength(NetClass.clearance);
+			CloseForm(false);
+			WriteLine();
+		}
+		if (NetClass.width)
+		{
+			OpenForm("attr",false);
+			WriteQuotedString("width");
+			WriteLength(NetClass.width);
+			CloseForm(false);
+			WriteLine();
+		}
+		if (NetClass.drill)
+		{
+			OpenForm("attr",false);
+			WriteQuotedString("MinViaDiameter");
+			WriteLength(NetClass.drill);
+			CloseForm(false);
+			WriteLine();
+		}
+		CloseForm(true);
+	}
+}
+
+void NetClasses()
+{
+	schematic(Schematic)
+	{
+		Schematic.classes(NetClass)
+		{
+			NetClassForm(NetClass);
+		}
+	}
+}
+
+void Attributes()
+{
+	schematic(Schematic)
+	{
+		char First=true;
+		Schematic.attributes(Attribute)
+		{
+			if (First)
+			{
+				OpenForm("globalAttrs",true);
+				WriteLine();
+				First=false;
+			}
+			AttributeForm(Attribute);
+		}
+		if (!First)
+		{
+			CloseForm(true);
+		}
+	}
+}
+
+void NetlistForm()
+{
+	OpenForm("netlist",true);
+	WriteString("Netlist_1");
+	WriteLine();
+	Attributes();
+	Components();
+	Nets();
+	NetClasses();
+	CloseForm(true);
+}
+
+void ComponentAttrForm(UL_INSTANCE Instance,UL_TEXT Attr,string AttributeName,char Visible)
+{
+	string AttrName;
+	if (strlen(AttributeName))
+	{
+		if (Instance.name!=Attr.value &&
+		    Instance.value!=Attr.value)
+		{
+			AttrName=AttributeName;
+		}
+	}
+	else
+	{
+		if (Instance.name==Attr.value)
+		{
+			AttrName="RefDes";
+		}
+		else
+		if (Instance.value==Attr.value)
+		{
+			AttrName="Value";
+		}
+	}
+	if (strlen(AttrName))
+	{
+		OpenForm("attr",false);
+
+		WriteQuotedString(AttrName);
+		if (strlen(AttributeName))
+		{
+			WriteQuotedString(Attr.value);
+		}
+		else
+		{
+			WriteQuotedString("");
+		}
+
+		OpenForm("pt",false);
+		WriteLength(Attr.x-Instance.x);
+		WriteLength(Attr.y-Instance.y);
+		CloseForm(false);
+
+		OpenForm("isVisible",false);
+		if (Visible)
+		{
+			WriteString("True");
+		}
+		else
+		{
+			WriteString("False");
+		}
+		CloseForm(false);
+
+		OpenForm("textStyleRef",false);
+		string Style=FindTextStyle(Attr.font,Attr.size,Attr.ratio);
+		WriteQuotedString(Style);
+		CloseForm(false);
+
+		if (Attr.angle!=0)
+		{
+			OpenForm("rotation",false);
+			WriteReal(Attr.angle);
+			CloseForm(false);
+		}
+
+		if (Attr.mirror)
+		{
+			OpenForm("isFlipped",false);
+			WriteString("true");
+			CloseForm(false);
+		}
+
+		CloseForm(false);
+		WriteLine();
+	}
+}
+
+int GetGateId(UL_INSTANCE Instance, UL_DEVICE Device)
+{
+	char Found=false;
+	int GateId=1;
+	int Iterator=1;
+	Device.gates(Gate)
+	{
+		if (!Found)
+		{
+			if (Instance.gate.name==Gate.name)
+			{
+				GateId = Iterator;
+				Found = true;
+			}
+			else
+			{
+				Iterator++;
+			}
+		}
+	}
+
+	return(GateId);
+}
+
+void SymbolInstance(UL_PART Component)
+{
+	Component.instances(Instance)
+	{
+		OpenForm("symbol",false);
+
+		OpenForm("symbolRef",false);
+		if (HaveDuplicateSymbolNames)
+		{
+			string SymbolName=Instance.gate.symbol.name;
+			string LibraryName=Instance.gate.symbol.library;
+			char Found=false;
+			char IncludeLibraryName=false;
+			int i;
+			for (i=0;
+				(i<NumberSymbols) &&!Found;
+				i++)
+			{
+				if (SymbolNames[i]==SymbolName)
+				{
+					if (SymbolLibraryNames[i]==LibraryName)
+					{
+						Found = true;
+					}
+					else
+					{
+						IncludeLibraryName=true;
+					}
+				}
+			}
+			if (IncludeLibraryName)
+			{
+				SymbolName=SymbolName+LibraryName;
+			}
+			WriteQuotedString(SymbolName);
+		}
+		else
+		{
+			WriteQuotedString(Instance.gate.symbol.name);
+		}
+		CloseForm(false);
+		
+		OpenForm("refDesRef",false);
+		WriteQuotedString(Component.name);
+		CloseForm(false);
+
+		OpenForm("partNum",false);
+		WriteInt(GetGateId(Instance,Component.device));
+		CloseForm(false);
+		
+		OpenForm("pt",false);
+		WriteLength(Instance.x);
+		WriteLength(Instance.y);
+		CloseForm(false);
+		
+		if (Instance.angle!=0)
+		{
+			OpenForm("rotation",false);
+			WriteReal(Instance.angle);
+			CloseForm(false);
+		}
+		
+		if (Instance.mirror)
+		{
+			OpenForm("isFlipped",false);
+			WriteString("true");
+			CloseForm(false);
+		}
+
+		Instance.texts(Attr1)
+		{
+			ComponentAttrForm(Instance,Attr1,"",true);
+		}
+
+		Instance.attributes(Attr2)
+		{
+			ComponentAttrForm(Instance,Attr2.text,Attr2.name,Attr2.display!=ATTRIBUTE_DISPLAY_FLAG_OFF);
+		}
+
+		int PinNumber=1;
+		char First=true;
+		Instance.gate.symbol.pins(Pin)
+		{
+			if (First)
+			{
+				WriteLine();
+				Indent();
+				First = false;
+			}
+			OpenForm("pin",false);
+
+			OpenForm("pinNum",false);
+			WriteInt(PinNumber);
+//			WriteString(Pin.name);
+			CloseForm(false);
+
+			char NameVisible=true;
+			char LogicVisible=false;
+			if ((Pin.visible&PIN_VISIBLE_FLAG_PAD)==0)
+			{
+				NameVisible = false;
+			}
+			if ((Pin.visible&PIN_VISIBLE_FLAG_PIN)!=0)
+			{
+				LogicVisible = true;
+			}
+
+			if (!NameVisible ||
+			     LogicVisible)
+			{
+				OpenForm("pinDisplay",false);
+				if (!NameVisible)
+				{
+					OpenForm("dispPinDes",false);
+					WriteString("false");
+					CloseForm(false);
+				}
+				if (LogicVisible)
+				{
+					OpenForm("dispPinName",false);
+					WriteString("true");
+					CloseForm(false);
+				}
+				CloseForm(false);
+			}
+
+			char DoneLogic=false;
+			Pin.texts(Text)
+			{
+//				WriteQuotedString(Text.value);
+//				WriteQuotedString(Pin.name);
+				
+				if (Text.value==LogicName(Pin.name) &&
+					LogicVisible)
+				{
+					if (!DoneLogic)
+					{
+						OpenForm("pinName",false);
+						TextForm(Text,"");
+						CloseForm(false);
+						DoneLogic = true;
+					}
+					else
+					{
+						OpenForm("pinDes",false);
+						TextForm(Text,"");
+						CloseForm(false);
+					}
+				}
+				else
+				{
+					OpenForm("pinDes",false);
+					TextForm(Text,"");
+					CloseForm(false);
+				}
+			}
+			CloseForm(false);
+			WriteLine();
+
+			PinNumber++;
+		}
+		if (!First)
+		{
+			UnIndent();
+		}
+		CloseForm(false);
+		WriteLine();
+	}
+}
+
+int BusId=0;
+int NumberBusses=0;
+int BusSheet[];
+int BusStartX[];
+int BusStartY[];
+int BusEndX[];
+int BusEndY[];
+numeric string BusName[];
+
+void OutputBus(UL_BUS Bus,int SheetNumber)
+{
+	Bus.segments(BusSegment)
+	{
+		BusSegment.wires(Line)
+		{
+			string Name;
+			sprintf(Name,"Bus%d",BusId);
+			OpenForm("bus",false);
+
+			WriteQuotedString(Name);
+
+			OpenForm("pt",false);
+			WriteLength(Line.x1);
+			WriteLength(Line.y1);
+			CloseForm(false);
+
+			OpenForm("pt",false);
+			WriteLength(Line.x2);
+			WriteLength(Line.y2);
+			CloseForm(false);
+
+			CloseForm(false);
+			WriteLine();
+
+			BusStartX[NumberBusses]=Line.x1;
+			BusStartY[NumberBusses]=Line.y1;
+			BusEndX[NumberBusses]=Line.x2;
+			BusEndY[NumberBusses]=Line.y2;
+			BusName[NumberBusses]=Name;
+			BusSheet[NumberBusses]=SheetNumber;
+			NumberBusses++;
+		}
+	}
+	BusId++;
+}
+
+void OutputNetName(UL_WIRE Connection, UL_SEGMENT SubNet)
+{
+	SubNet.texts(NetName)
+	{
+		char Output=false;
+		if (Connection.y1==Connection.y2)
+		{
+			if (Connection.x1<Connection.x2)
+			{
+				if (NetName.x>=Connection.x1 && 
+					NetName.x<=Connection.x2)
+				{
+					Output = true;
+				}
+			}
+			else
+			{
+				if (NetName.x>=Connection.x2 && 
+					NetName.x<=Connection.x1)
+				{
+					Output = true;
+				}
+			}
+		}
+		else
+		if (Connection.x1==Connection.x2)
+		{
+			if (Connection.y1<Connection.y2)
+			{
+				if (NetName.y>=Connection.y1 && 
+					NetName.y<=Connection.y2)
+				{
+					Output = true;
+				}
+			}
+			else
+			{
+				if (NetName.y>=Connection.y2 && 
+					NetName.y<=Connection.y1)
+				{
+					Output = true;
+				}
+			}
+		}
+		else
+		{
+			//TGT do something just do something
+		}
+		if (Output)
+		{
+			OpenForm("dispName",false);
+			WriteString("true");
+			CloseForm(false);
+			
+			OpenForm("text",false);
+
+			OpenForm("pt",false);
+			WriteLength(NetName.x);
+			WriteLength(NetName.y);
+			CloseForm(false);
+
+			WriteQuotedString("");
+
+			OpenForm("textStyleRef",false);
+			string Style=FindTextStyle(NetName.font,NetName.size,NetName.ratio);
+			WriteQuotedString(Style);
+			CloseForm(false);
+
+			CloseForm(false);
+		}
+	}
+}
+
+enum {left,right,down,up};
+
+void SheetNet(UL_NET Net, int SheetNumber)
+{
+	Net.segments(SubNet)
+	{
+		SubNet.junctions(Junction)
+		{
+			OpenForm("junction",false);
+
+			OpenForm("pt",false);
+			WriteLength(Junction.x);
+			WriteLength(Junction.y);
+			CloseForm(false);
+
+			OpenForm("netNameRef",false);
+			WriteQuotedString(Net.name);
+			CloseForm(false);
+
+			CloseForm(false);
+			WriteLine();
+		}
+
+		SubNet.wires(Connection)
+		{
+   			char BusTerminal=false;
+  			char Angled=false;
+  			int Side=right;
+  			if (Connection.x1!=Connection.x2 &&
+  				Connection.y1!=Connection.y2)
+  			{
+  				Angled=true;
+  			}
+			int i;
+			for (i=0;
+				 i<NumberBusses && !BusTerminal;
+				 i++)
+			{
+				if (BusSheet[i]==SheetNumber)
+				{
+					int Side=right;
+					if (BusStartX[i]==BusEndX[i])
+					{
+						int Low=min(BusStartY[i],BusEndY[i]);
+						int High=max(BusStartY[i],BusEndY[i]);
+						//Vertical Bus Segment
+						if (Connection.x1==BusStartX[i])
+						{
+							if (Connection.y1>=Low &&
+								Connection.y1<=High)
+							{
+								BusTerminal = true;
+								if (Connection.x2<Connection.x1)
+								{
+									Side=left;
+								}
+							}
+						}
+						else
+						if (Connection.x2==BusStartX[i])
+						{
+							if (Connection.y2>=Low &&
+								Connection.y2<=High)
+							{
+								BusTerminal = true;
+								if (Connection.x1<Connection.x2)
+								{
+									Side=left;
+								}
+							}
+						}
+					}
+  					else
+  					if (BusStartY[i]==BusEndY[i])
+  					{
+  						int Low=min(BusStartX[i],BusEndX[i]);
+  						int High=max(BusStartX[i],BusEndX[i]);
+  						//Horizontal Bus Segment
+  						if (Connection.y1==BusStartY[i])
+  						{
+  							if (Connection.x1>=Low &&
+  								Connection.x1<=High)
+  							{
+  								BusTerminal = true;
+  								if (Connection.y2<Connection.y1)
+  								{
+  									Side=up;
+  								}
+  								else
+  								{
+  									Side=down;
+  								}
+  							}
+  						}
+  						else
+  						if (Connection.y2==BusStartY[i])
+  						{
+  							if (Connection.x2>=Low &&
+  								Connection.x2<=High)
+  							{
+  								BusTerminal = true;
+  								if (Connection.y1<Connection.y2)
+  								{
+  									Side=up;
+  								}
+  								else
+  								{
+  									Side=down;
+  								}
+  							}
+  						}
+  					}
+					if (BusTerminal)
+					{
+						OpenForm("busEntry",false);
+
+						OpenForm("busNameRef",false);
+						WriteString(BusName[i]);
+						CloseForm(false);
+
+						OpenForm("pt",false);
+ 						if (Side==left || Side==right)
+ 						{
+							WriteLength(BusStartX[i]);
+							if (Connection.y1==BusStartX[i])
+							{
+								WriteLength(Connection.y1);
+							}
+							else
+							{
+								WriteLength(Connection.y2);
+							}
+ 						}
+ 						else
+ 						{
+ 							if (Connection.x1==BusStartY[i])
+ 							{
+ 								WriteLength(Connection.x1);
+ 							}
+ 							else
+ 							{
+ 								WriteLength(Connection.x2);
+ 							}
+ 							WriteLength(BusStartY[i]);
+ 						}
+						CloseForm(false);
+
+						OpenForm("orient",false);
+ 						if (Angled)
+ 						{
+    						switch(Side)
+    						{
+    							case left:
+    							WriteString("left");
+    							break;
+
+    							case right:
+    							WriteString("right");
+    							break;
+
+    							case up:
+    							WriteString("up");
+    							break;
+
+    							case down:
+    							WriteString("down");
+    							break;
+
+    						}
+ 						}
+ 						else
+ 						{
+ 							WriteString("Zero");
+ 						}
+						CloseForm(false);
+
+						CloseForm(false);
+						WriteLine();
+					}
+				}
+			}
+			OpenForm("wire",false);
+			if (Connection.arc)
+			{
+				ArcForm(Connection.arc,Net.name);
+			}
+			else
+			{
+				LineForm(Connection,Net.name,"");
+			}
+//			if (!BusTerminal)
+//			{
+//				OutputNetName(Connection,SubNet);
+//			}
+			CloseForm(false);
+			WriteLine();
+		}
+		SubNet.texts(NetName)
+		{
+			OpenForm("netLabel",false);
+			
+			OpenForm("text",false);
+
+			OpenForm("pt",false);
+			WriteLength(NetName.x);
+			WriteLength(NetName.y);
+			CloseForm(false);
+
+			WriteQuotedString(Net.name);
+
+			OpenForm("textStyleRef",false);
+			string Style=FindTextStyle(NetName.font,NetName.size,NetName.ratio);
+			WriteQuotedString(Style);
+			CloseForm(false);
+
+			if (NetName.angle!=0)
+			{
+				OpenForm("rotation",false);
+				WriteReal(NetName.angle);
+				CloseForm(false);
+			}
+
+			if (NetName.mirror)
+			{
+				OpenForm("isFlipped",false);
+				WriteString("true");
+				CloseForm(false);
+			}
+
+			CloseForm(false);
+			
+			CloseForm(false);
+			WriteLine();
+		}
+	}
+}
+
+void Sheets()
+{
+	schematic(Schematic)
+	{
+		Schematic.sheets(Sheet)
+		{
+			OpenForm("sheet",true);
+
+			string name;
+			sprintf(name,"Sheet%d",Sheet.number);
+			WriteQuotedString(name);
+
+			OpenForm("sheetNum",false);
+			WriteInt(Sheet.number);
+			CloseForm(false);
+			WriteLine();
+
+			Sheet.wires(Line)
+			{
+				if (Line.arc)
+				{
+					ArcForm(Line.arc,"");
+				}
+				else
+				{
+					LineForm(Line,"","");
+				}
+			}
+			Sheet.circles(Circle)
+			{
+				CircleForm(Circle);
+			}
+			Sheet.rectangles(Rectangle)
+			{
+//				char NotFilled=(Rectangle.layer.fill!=1);
+				RectangleForm(Rectangle,GetLayerFilling(Rectangle.layer)!=1);
+			}
+			Sheet.texts(Text)
+			{
+				TextOrAttrForm(Text);
+			}
+			Sheet.parts(Component)
+			{
+				SymbolInstance(Component);
+			}
+			Sheet.busses(Bus)
+			{
+				OutputBus(Bus,Sheet.number);
+			}
+			Sheet.nets(Net)
+			{
+				SheetNet(Net,Sheet.number);
+			}
+
+			CloseForm(true);
+		}
+	}
+}
+
+void SetupFilling()
+{
+	schematic(Schematic)
+	{
+		Schematic.layers(Layer)
+		{
+			SetLayerFilling(Layer.number,Layer.fill);
+		}
+	}
+}
+
+void SchematicDesign()
+{
+	OpenForm("schematicDesign",true);
+	WriteQuotedString("Design_1");
+	WriteLine();
+	Sheets();
+	CloseForm(true);
+}
+
+schematic(Schematic)
+{
+    string DefaultName = filesetext(Schematic.name, ".eis");
+	string Filename = dlgFileSave("Eagle to Schematic Intermediate Format",DefaultName,"*.eis");
+	if (strlen(Filename))
+	{
+		output(Filename)
+		{
+			SetupFilling();
+			HeaderForm();
+			LibraryForm();
+			NetlistForm();
+			SchematicDesign();
+		}
+	}
+}

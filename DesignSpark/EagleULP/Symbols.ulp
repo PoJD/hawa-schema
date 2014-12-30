@@ -1,0 +1,237 @@
+//Eagle Intermediate Format Symbol routines
+
+int NumberSymbols=0;
+numeric string SymbolNames[];
+numeric string SymbolLibraryNames[];
+char HaveDuplicateSymbolNames=false;
+
+void SymbolGraphicalInfo(UL_SYMBOL Symbol)
+{
+	Symbol.frames(Frame)
+	{
+		OpenForm("poly", true);
+
+		OpenForm("pt",false);
+		WriteLength(Frame.x1);
+		WriteLength(Frame.y1);
+		CloseForm(false);
+
+		OpenForm("pt",false);
+		WriteLength(Frame.x2);
+		WriteLength(Frame.y1);
+		CloseForm(false);
+
+		OpenForm("pt",false);
+		WriteLength(Frame.x2);
+		WriteLength(Frame.y2);
+		CloseForm(false);
+
+		OpenForm("pt",false);
+		WriteLength(Frame.x1);
+		WriteLength(Frame.y2);
+		CloseForm(false);
+
+		OpenForm("pt",false);
+		WriteLength(Frame.x1);
+		WriteLength(Frame.y1);
+		CloseForm(false);
+
+		OpenForm("NotFilled",false);
+		CloseForm(false);
+
+		CloseForm(true);
+	}
+	Symbol.wires(Line)
+	{
+		if (Line.arc)
+		{
+			ArcForm(Line.arc,"");
+		}
+		else
+		{
+			LineForm(Line,"","");
+		}
+	}
+	Symbol.circles(Circle)
+	{
+		CircleForm(Circle);
+	}
+	Symbol.rectangles(Rectangle)
+	{
+/*		char NotFilled=false;
+		if (Rectangle.layer.fill!=1)
+		{
+			NotFilled=true;
+		}*/
+		RectangleForm(Rectangle,GetLayerFilling(Rectangle.layer)!=1);
+	}
+	Symbol.polygons(Polygon)
+	{
+		PolygonForm(Polygon);
+	}
+	Symbol.texts(Text)
+	{
+		TextOrAttrForm(Text);
+	}
+}
+
+void SymbolForm(UL_SYMBOL Symbol, char IncludeLibraryName)
+{
+	string SymbolName;
+	if (IncludeLibraryName)
+	{
+		SymbolName = Symbol.name + Symbol.library;
+	}
+	else
+	{
+		SymbolName = Symbol.name;
+	}
+
+	OpenForm("symbolDef",true);
+	WriteQuotedString(SymbolName);
+
+	OpenForm("originalName",false);
+	WriteQuotedString(SymbolName);
+	CloseForm(false);
+	WriteLine();
+
+	int PinNumber=1;
+	Symbol.pins(Pin)
+	{
+		OpenForm("pin",false);
+
+		OpenForm("pinNum",false);
+		WriteInt(PinNumber);
+		CloseForm(false);
+
+		OpenForm("pt",false);
+		WriteLength(Pin.x);
+		WriteLength(Pin.y);
+		CloseForm(false);
+
+		if (Pin.angle != 0)
+		{
+			OpenForm("rotation",false);
+			WriteReal(Pin.angle);
+			CloseForm(false);
+		}
+
+		OpenForm("pinLength",false);
+		if (Pin.length==PIN_LENGTH_SHORT)
+		{
+			WriteString("100 mils");
+		}
+		else
+		if (Pin.length==PIN_LENGTH_MIDDLE)
+		{
+			WriteString("200 mils");
+		}
+		else
+		if (Pin.length==PIN_LENGTH_LONG)
+		{
+			WriteString("300 mils");
+		}
+		else
+		if (Pin.length==PIN_LENGTH_POINT)
+		{
+			WriteString("0");
+		}
+		
+		CloseForm(false);
+
+		if ((Pin.function&PIN_FUNCTION_FLAG_DOT)!=0)
+		{
+			OpenForm("outsideEdgeStyle",false);
+			WriteString("Dot");
+			CloseForm(false);
+		}
+		if ((Pin.function&PIN_FUNCTION_FLAG_CLK)!=0)
+		{
+			OpenForm("insideEdgeStyle",false);
+			WriteString("Clock");
+			CloseForm(false);
+		}
+
+		char NameVisible=true;
+		char LogicVisible=false;
+		if ((Pin.visible&PIN_VISIBLE_FLAG_PAD)==0)
+		{
+			NameVisible = false;
+		}
+		if ((Pin.visible&PIN_VISIBLE_FLAG_PIN)!=0)
+		{
+			LogicVisible = true;
+		}
+
+		if (!NameVisible ||
+			LogicVisible)
+		{
+			OpenForm("pinDisplay",false);
+			if (!NameVisible)
+			{
+				OpenForm("dispPinDes",false);
+				WriteString("false");
+				CloseForm(false);
+			}
+			if (LogicVisible)
+			{
+				OpenForm("dispPinName",false);
+				WriteString("true");
+				CloseForm(false);
+			}
+			CloseForm(false);
+		}
+
+		char DoneLogic=false;
+		Pin.texts(Text)
+		{
+//			WriteQuotedString(Text.value);
+//			WriteQuotedString(Pin.name);
+			
+			if (Text.value==LogicName(Pin.name) &&
+				LogicVisible)
+			{
+				if (!DoneLogic)
+				{
+					OpenForm("pinName",false);
+					TextForm(Text,"");
+					CloseForm(false);
+					DoneLogic = true;
+				}
+				else
+				{
+					OpenForm("pinDes",false);
+					TextForm(Text,"");
+					CloseForm(false);
+				}
+			}
+			else
+			{
+				OpenForm("pinDes",false);
+				TextForm(Text,"");
+				CloseForm(false);
+			}
+		}
+
+		CloseForm(false);
+
+		WriteLine();
+
+		PinNumber++;
+	}
+
+	SymbolGraphicalInfo(Symbol);
+
+	CloseForm(true);
+}
+
+int CountPins(UL_SYMBOL Symbol)
+{
+	int Count=0;
+	Symbol.pins(Pin)
+	{
+		Count++;
+	}
+	return(Count);
+}
+

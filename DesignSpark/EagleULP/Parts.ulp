@@ -1,0 +1,573 @@
+//Eagle Intermediate Format Part routines
+
+int NumberParts=0;
+numeric string PartNames[];
+numeric string LibraryNames[];
+int NumberComponents=0;
+
+int CountGates(UL_DEVICE Part)
+{
+	int Count=0;
+	Part.gates(Gate)
+	{
+		Count++;
+	}
+	return(Count);
+}
+
+int CountPartPins(UL_DEVICE Part)
+{
+	int Count=0;
+
+	Part.gates(Gate)
+	{
+		int SymbolPin=1;
+		Gate.symbol.pins(Pin)
+		{
+			Count++;
+		}
+	}
+	return(Count);
+}
+
+void GatePins(UL_DEVICE Part)
+{
+	int GateId=1;
+
+	Part.gates(Gate)
+	{
+		int SymbolPin=1;
+		Gate.symbol.pins(Pin)
+		{
+			OpenForm("compPin",false);
+			
+			char FoundContact=false;
+			char First=true;
+			string PadNumbers;
+
+			if (EAGLE_VERSION>=6)
+			{
+				Pin.contacts(Pad)
+				{
+					FoundContact=true;
+					if (!First)
+					{
+						PadNumbers=PadNumbers+",";
+					}
+					PadNumbers=PadNumbers+Pad.name;
+					First=false;
+				}
+				if (FoundContact)
+				{
+					WriteQuotedString(PadNumbers);
+				}
+			}
+			else
+			{
+				if (Pin.contact)
+				{
+					WriteQuotedString(Pin.contact.name);
+					FoundContact=true;
+				}
+			}
+			if (!FoundContact);
+			{
+				WriteInt(SymbolPin);
+			}
+
+//			WriteQuotedString(Pin.name);
+			OpenForm("pinName",false);
+			WriteQuotedString(LogicName(Pin.name));
+			CloseForm(false);
+
+			OpenForm("partNum",false);
+			WriteInt(GateId);
+			CloseForm(false);
+
+			OpenForm("symPinNum",false);
+			WriteInt(SymbolPin);
+			CloseForm(false);
+
+			OpenForm("gateEq",false);
+			WriteInt(Gate.swaplevel);
+			CloseForm(false);
+
+			OpenForm("pinEq",false);
+			WriteInt(Pin.swaplevel);
+			CloseForm(false);
+
+			OpenForm("pinType",false);
+			string PinType;
+			if (Pin.direction==PIN_DIRECTION_IN)
+			{
+				PinType = "Input";
+			}
+			else
+			if (Pin.direction==PIN_DIRECTION_OUT)
+			{
+				PinType = "Output";
+			}
+			else
+			if (Pin.direction==PIN_DIRECTION_PWR)
+			{
+				PinType = "Power";
+			}
+			else
+			if (Pin.direction==PIN_DIRECTION_NC)
+			{
+				PinType = "NotConnected";
+			}
+			else
+			if (Pin.direction==PIN_DIRECTION_IO)
+			{
+				PinType = "Bidirectional";
+			}
+			else
+			if (Pin.direction==PIN_DIRECTION_PAS)
+			{
+				PinType = "Passive";
+			}
+			else
+			if (Pin.direction==PIN_DIRECTION_HIZ)
+			{
+				PinType = "HiZ";
+			}
+			else
+			if (Pin.direction==PIN_DIRECTION_OC)
+			{
+				PinType = "OpenL";
+			}
+			else
+			if (Pin.direction==PIN_DIRECTION_SUP)
+			{
+				PinType = "Output";
+			}
+
+			WriteString(PinType);
+			CloseForm(false);
+
+			CloseForm(false);
+			WriteLine();
+			SymbolPin++;
+		}
+		GateId++;
+	}
+}
+
+void GateSymbols(UL_DEVICE Part)
+{
+	int GateId=1;
+
+	Part.gates(Gate)
+	{
+		OpenForm("attachedSymbol",false);
+
+		OpenForm("partNum",false);
+		WriteInt(GateId);
+		CloseForm(false);
+
+		OpenForm("altType",false);
+		WriteString("Normal");
+		CloseForm(false);
+
+		OpenForm("symbolName",false);
+		if (HaveDuplicateSymbolNames)
+		{
+			string SymbolName=Gate.symbol.name;
+			string LibraryName=Gate.symbol.library;
+			char Found=false;
+			char IncludeLibraryName=false;
+			int i;
+			for (i=0;
+				(i<NumberSymbols) &&!Found;
+				i++)
+			{
+				if (SymbolNames[i]==SymbolName)
+				{
+					if (SymbolLibraryNames[i]==LibraryName)
+					{
+						Found = true;
+					}
+					else
+					{
+						IncludeLibraryName=true;
+					}
+				}
+			}
+			if (IncludeLibraryName)
+			{
+				SymbolName=SymbolName+LibraryName;
+			}
+			WriteQuotedString(SymbolName);
+		}
+		else
+		{
+			WriteQuotedString(Gate.symbol.name);
+		}
+		CloseForm(false);
+
+		CloseForm(false);
+		WriteLine();
+		GateId++;
+	}
+}
+
+void FootprintMap(UL_DEVICE Part,string UseThisFootprint)
+{
+	
+	OpenForm("attachedPattern",true);
+
+	OpenForm("patternNum",false);
+	WriteInt(1);
+	CloseForm(false);
+
+	OpenForm("patternName",false);
+	if (strlen(UseThisFootprint))
+	{
+		WriteQuotedString(UseThisFootprint);
+	}
+	else
+	{
+		WriteQuotedString(Part.package.name);
+	}
+	CloseForm(false);
+	WriteLine();
+
+	OpenForm("numPads",false);
+	WriteInt(CountPads(Part.package));
+	CloseForm(false);
+	WriteLine();
+
+	int PadNumber=1;
+	OpenForm("padPinMap",true);
+	WriteLine();
+	Part.package.contacts(Pad)
+	{
+		OpenForm("padNum",false);
+		WriteInt(PadNumber);
+		CloseForm(false);
+
+		OpenForm("compPinRef",false);
+		WriteQuotedString(Pad.name);
+		CloseForm(false);
+		WriteLine();
+		PadNumber++;
+	}
+	CloseForm(true);
+
+	CloseForm(true);
+}
+
+string NextTechnology(string Technologies)
+{
+	string Technology;
+	if (strlen(Technologies))
+	{
+		int SpaceIndex=strchr(Technologies,' ');
+		if (SpaceIndex!=-1)
+		{
+			Technology=strsub(Technologies,0,SpaceIndex);
+		}
+		else
+		{
+			Technology=Technologies;
+		}
+		if (Technology=="''")
+		{
+			Technology = "";
+		}
+	}
+	return(Technology);
+}
+
+string GetRestofTechnolgies(string Technologies)
+{
+	string Rest;
+	if (strlen(Technologies))
+	{
+		int SpaceIndex=strchr(Technologies,' ');
+		if (SpaceIndex!=-1)
+		{
+			Rest=strsub(Technologies,SpaceIndex+1);
+		}
+	}
+	return(Rest);
+}
+
+string RemoveRichText(string String)
+{
+	string Temp=String;
+	string Mangled;
+	int Index=strchr(Temp,'<');
+	char Finished=false;
+
+	while (!Finished)
+	{
+		if (Index==-1)
+		{
+			Finished = true;
+		}
+		else
+		{
+			string Pre=strsub(Temp,0,Index);
+			Temp=strsub(Temp,Index+1);
+			int CloseIndex=strchr(Temp,'>');
+			if (CloseIndex==-1)
+			{
+				//Illegal rich text or maybe not even rich text so give up
+				Finished = true;
+			}
+			else
+			{
+				Temp=strsub(Temp,CloseIndex+1);
+				Index=strchr(Temp,'<');
+			}
+			Mangled = Mangled + Pre;
+		}
+	}
+
+	Mangled = Mangled + Temp;
+	return(Mangled);
+}
+
+void PartForm(UL_DEVICE Part,string DerivedFrom, char IncludeLibraryName, string UseThisFootprint)
+{
+	string FirstPart;
+	string RestOfTechnologies;
+	string Prefix;
+	string Suffix;
+	string Name=Part.name;
+	char MultipleParts=false;
+
+	if (Name=="''")
+	{
+		Name="";
+	}
+
+	if (strlen(DerivedFrom))
+	{
+		int WildIndex;
+		if ((WildIndex=strchr(DerivedFrom,'?'))!=-1)
+		{
+			Prefix=strsub(DerivedFrom,0,WildIndex);
+			Suffix=strsub(DerivedFrom,WildIndex+1);
+			FirstPart = Prefix + Name + Suffix;
+		}
+		else
+		{
+			if ((WildIndex=strchr(DerivedFrom,'*'))!=-1)
+			{
+				Prefix=strsub(DerivedFrom,0,WildIndex);
+				Suffix=strsub(DerivedFrom,WildIndex+1);
+				MultipleParts = true;
+			}
+			else
+			{
+				Prefix=DerivedFrom;
+			}
+
+			string Technology=NextTechnology(Part.technologies);
+			RestOfTechnologies = GetRestofTechnolgies(Part.technologies);
+
+			FirstPart = Prefix + Technology + Suffix + Name;
+		}
+	}
+	else
+	{
+		FirstPart = Name;
+	}
+	
+	if (IncludeLibraryName)
+	{
+		FirstPart = FirstPart + Part.library;
+	}
+
+	OpenForm("compDef",true);
+	WriteQuotedString(FirstPart);
+	WriteLine();
+
+	OpenForm("originalName",false);
+	WriteQuotedString(FirstPart);
+	CloseForm(false);
+	WriteLine();
+
+	OpenForm("compHeader",true);
+
+	OpenForm("numPins",false);
+	if (Part.package)
+	{
+		WriteInt(CountPads(Part.package));
+	}
+	else
+	{
+		WriteInt(CountPartPins(Part));
+	}
+	CloseForm(false);
+
+	int PinCount=CountPartPins(Part);
+	if (PinCount==0 &&
+	    !Part.package)
+	{
+		OpenForm("compType",false);
+		WriteString("Document");
+		CloseForm(false);
+	}
+	else
+	if (PinCount==1 && 
+	    !Part.package)
+	{
+		OpenForm("compType",false);
+		WriteString("Power");
+		CloseForm(false);
+	}
+	WriteLine();
+
+	OpenForm("numParts",false);
+	WriteInt(CountGates(Part));
+	CloseForm(false);
+	WriteLine();
+
+	OpenForm("refDesPrefix",false);
+	WriteString(Part.prefix);
+	CloseForm(false);
+	WriteLine();
+
+	CloseForm(true);
+
+	GatePins(Part);
+
+	GateSymbols(Part);
+
+	if (Part.package)
+	{
+		FootprintMap(Part,UseThisFootprint);
+	}
+
+	if (strlen(Part.description))
+	{
+		string Description=RemoveRichText(Part.description);
+		OpenForm("attr",false);
+		WriteQuotedString("Description");
+		WriteQuotedString(Description);
+		CloseForm(false);
+		WriteLine();
+	}
+	
+	string Technology=NextTechnology(Part.technologies);
+	Part.attributes(Attribute,Technology)
+	{
+		AttributeForm(Attribute);
+	}
+
+	CloseForm(true);
+
+	if (MultipleParts)
+	{
+		int Count=0;
+		while (strlen(RestOfTechnologies))
+		{
+			string Technology=NextTechnology(RestOfTechnologies);
+			RestOfTechnologies = GetRestofTechnolgies(RestOfTechnologies);
+
+			string NextPart = Prefix + Technology + Suffix + Name;
+			
+			if (IncludeLibraryName)
+			{
+				NextPart = NextPart + Part.library;		
+			}
+
+			OpenForm("compAlias",false);
+			WriteQuotedString(NextPart);
+			WriteQuotedString(FirstPart);
+			CloseForm(false);
+			WriteLine();
+			Count++;
+		}
+	}
+}
+
+void FootprintMap1(UL_PACKAGE Footprint)
+{
+	
+	OpenForm("attachedPattern",true);
+
+	OpenForm("patternNum",false);
+	WriteInt(1);
+	CloseForm(false);
+
+	OpenForm("patternName",false);
+	WriteQuotedString(Footprint.name);
+	CloseForm(false);
+	WriteLine();
+
+	OpenForm("numPads",false);
+	WriteInt(CountPads(Footprint));
+	CloseForm(false);
+	WriteLine();
+
+	int PadNumber=1;
+	OpenForm("padPinMap",true);
+	WriteLine();
+	Footprint.contacts(Pad)
+	{
+		OpenForm("padNum",false);
+		WriteInt(PadNumber);
+		CloseForm(false);
+
+		OpenForm("compPinRef",false);
+		WriteQuotedString(Pad.name);
+		CloseForm(false);
+		WriteLine();
+		PadNumber++;
+	}
+	CloseForm(true);
+
+	CloseForm(true);
+}
+
+void FootprintPartForm(UL_PACKAGE Footprint)
+{
+	OpenForm("compDef",true);
+	WriteQuotedString(Footprint.name);
+	WriteLine();
+
+	OpenForm("originalName",false);
+	WriteQuotedString(Footprint.name);
+	CloseForm(false);
+	WriteLine();
+
+	OpenForm("compHeader",true);
+
+	OpenForm("numPins",false);
+	WriteInt(CountPads(Footprint));
+	CloseForm(false);
+
+	WriteLine();
+
+	OpenForm("numParts",false);
+	WriteInt(0);
+	CloseForm(false);
+	WriteLine();
+
+	OpenForm("refDesPrefix",false);
+	WriteString("U");
+	CloseForm(false);
+	WriteLine();
+
+	CloseForm(true);
+
+	FootprintMap1(Footprint);
+
+	if (strlen(Footprint.description))
+	{
+		string Description=RemoveRichText(Footprint.description);
+		OpenForm("attr",false);
+		WriteQuotedString("Description");
+		WriteQuotedString(Description);
+		CloseForm(false);
+		WriteLine();
+	}
+
+	CloseForm(true);
+}
+

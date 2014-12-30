@@ -1,0 +1,166 @@
+// Eagle Board to Intermediate format
+
+#include "Output.ulp"
+
+#include "Styles.ulp"
+
+#include "Layers.ulp"
+
+#include "ShapesText.ulp"
+
+#include "Footprints.ulp"
+
+#include "Symbols.ulp"
+
+#include "Parts.ulp"
+
+void PadStyles(void)
+{
+	library(Library)
+	{
+		Library.packages(Footprint)
+		{
+			FootprintPadStyles(Footprint);
+		}
+	}
+
+	OutputPadStyles();
+
+
+}
+
+void TextStyles(void)
+{
+	library(Library)
+	{
+		Library.packages(Footprint)
+		{
+			FootprintTextStyles(Footprint);
+		}
+		Library.symbols(Symbol)
+		{
+			SymbolTextStyles(Symbol);
+		}
+	}
+
+	OutputTextStyles();
+
+}
+
+void Footprints(void)
+{
+	library(Library)
+	{
+		Library.packages(Footprint)
+		{
+			FootprintForm(Footprint);
+		}
+	}
+}
+
+void Symbols(void)
+{
+	library(Library)
+	{
+		Library.symbols(Symbol)
+		{
+			SymbolForm(Symbol,false);
+		}
+	}
+}
+
+void Parts(void)
+{
+	library(Library)
+	{
+		Library.devicesets(Group)
+		{
+//			WriteQuotedString(Group.name);
+//			WriteLine();
+			Group.devices(Part)
+			{
+				PartForm(Part,Group.name,false,"");
+			}
+		}
+	}
+}
+
+void LibraryForm()
+{
+	OpenForm("library",true);
+	WriteString("Library_1");
+	WriteLine();
+	PadStyles();
+	TextStyles();
+	Footprints();
+	Symbols();
+	Parts();
+	CloseForm(true);
+}
+
+void HeaderForm()
+{
+	library(Library)
+	{
+		Units = Library.grid.unit;
+
+		WriteString("EAGLE_INTERMEDIATE_ASCII");
+		WriteQuotedString(Library.name);
+		WriteLine();
+		WriteLine();
+
+		OpenForm("asciiHeader",true);
+		WriteLine();
+
+		OpenForm("fileUnits",false);
+		if (Library.grid.unit==GRID_UNIT_MM)
+		{
+			WriteString("MM");
+		}
+		else
+		if (Library.grid.unit==GRID_UNIT_MIL)
+		{
+			WriteString("MIL");
+		}
+		else
+		if (Library.grid.unit==GRID_UNIT_INCH)
+		{
+			WriteString("IN");
+		}
+		else
+		if (Library.grid.unit==GRID_UNIT_MIC)
+		{
+			WriteString("MIC");
+		}
+		CloseForm(false);
+		WriteLine();
+
+		CloseForm(true);
+	}
+}
+
+
+void SetupFilling()
+{
+	library(Library)
+	{
+		Library.layers(Layer)
+		{
+			SetLayerFilling(Layer.number,Layer.fill);
+		}
+	}
+}
+
+library(Library)
+{
+    string DefaultName = filesetext(Library.name, ".eil");
+	string Filename = dlgFileSave("Eagle to Library Intermediate Format",DefaultName,"*.eil");
+	if (strlen(Filename))
+	{
+		output(Filename)
+		{
+			HeaderForm();
+			LibraryForm();
+		}
+	}
+}

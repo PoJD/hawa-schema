@@ -1,0 +1,606 @@
+//Eagle Intermediate Format Shapes and text routines
+
+void LineForm(UL_WIRE Line,string NetName,string KeepoutType)
+{
+	if (strlen(KeepoutType))
+	{
+		OpenForm("lineKeepOut",false);
+	}
+	else
+	{
+		OpenForm("line",false);
+	}
+
+	OpenForm("pt",false);
+	WriteLength(Line.x1);
+	WriteLength(Line.y1);
+	CloseForm(false);
+
+	OpenForm("pt",false);
+	WriteLength(Line.x2);
+	WriteLength(Line.y2);
+	CloseForm(false);
+
+	OpenForm("width",false);
+	WriteLength(Line.width);
+	CloseForm(false);
+
+	// 35915 add linestyle
+	OpenForm("linestyle",false);
+	WriteInt(Line.style);
+	CloseForm(false);
+
+	if (strlen(NetName))
+	{
+		OpenForm("netNameRef",false);
+		WriteQuotedString(NetName);
+		CloseForm(false);
+	}
+
+	if (strlen(KeepoutType))
+	{
+		OpenForm("keepoutType",false);
+		WriteQuotedString(NetName);
+		CloseForm(false);
+	}
+
+
+	CloseForm(false);
+	WriteLine();
+}
+
+void CircleForm(UL_CIRCLE Circle)
+{
+	OpenForm("arc",false);
+
+	OpenForm("pt",false);
+	WriteLength(Circle.x);
+	WriteLength(Circle.y);
+	CloseForm(false);
+
+	OpenForm("radius",false);
+	WriteLength(Circle.radius);
+	CloseForm(false);
+
+	OpenForm("startAngle",false);
+	WriteString("0.0");
+	CloseForm(false);
+
+	OpenForm("sweepAngle",false);
+	WriteString("360.0");
+	CloseForm(false);
+
+	OpenForm("width",false);
+	WriteLength(Circle.width);
+	CloseForm(false);
+
+	if (Circle.width==0)
+	{	
+		OpenForm("Filled",false);
+		CloseForm(false);
+	}
+
+	CloseForm(false);
+	WriteLine();
+}
+
+void CircleKeepoutForm(UL_CIRCLE Circle,string KeepoutType)
+{
+	OpenForm("circleKeepOut",false);
+
+	OpenForm("pt",false);
+	WriteLength(Circle.x);
+	WriteLength(Circle.y);
+	CloseForm(false);
+
+	OpenForm("radius",false);
+	WriteLength(Circle.radius);
+	CloseForm(false);
+
+	OpenForm("width",false);
+	WriteLength(Circle.width);
+	CloseForm(false);
+
+	OpenForm("keepoutType",false);
+	WriteQuotedString(KeepoutType);
+	CloseForm(false);
+
+	CloseForm(false);
+	WriteLine();
+}
+
+int NewPointX;
+int NewPointY;
+
+void PointRotate(int PointX, int PointY, real Angle, int OriginX, int OriginY)
+{
+	NewPointX = PointX;
+	NewPointY = PointY;
+
+	int xOffset = PointX - OriginX;
+	int yOffset = PointY - OriginY;
+	real cosAngle;
+	real sinAngle;
+	real AngleRads=(Angle*PI)/180.0;
+
+	cosAngle = cos(AngleRads);
+	sinAngle = sin(AngleRads);
+
+	NewPointX = OriginX	+ xOffset * cosAngle - yOffset * sinAngle;
+	NewPointY = OriginY	+ xOffset * sinAngle + yOffset * cosAngle;
+}
+
+void PointOffset(int PointX, int PointY, real Angle, int Dist)
+{
+	NewPointX = PointX;
+	NewPointY = PointY;
+
+	real cosAngle;
+	real sinAngle;
+	real AngleRads=(Angle*PI)/180.0;
+
+	cosAngle = cos(AngleRads);
+	sinAngle = sin(AngleRads);
+
+	NewPointX = PointX	+ (cosAngle*Dist);
+	NewPointY = PointY	+ (sinAngle*Dist);
+}
+
+void RotatedRectangleForm(UL_RECTANGLE Rectangle)
+{
+	int xCentre=(Rectangle.x1+Rectangle.x2)/2;
+	int yCentre=(Rectangle.y1+Rectangle.y2)/2;
+	
+	OpenForm("pcbPoly",false);
+
+	OpenForm("pt",false);
+	PointRotate(Rectangle.x1,Rectangle.y1,Rectangle.angle,xCentre,yCentre);
+	WriteLength(NewPointX);
+	WriteLength(NewPointY);
+	CloseForm(false);
+
+	OpenForm("pt",false);
+	PointRotate(Rectangle.x2,Rectangle.y1,Rectangle.angle,xCentre,yCentre);
+	WriteLength(NewPointX);
+	WriteLength(NewPointY);
+	CloseForm(false);
+
+	OpenForm("pt",false);
+	PointRotate(Rectangle.x2,Rectangle.y2,Rectangle.angle,xCentre,yCentre);
+	WriteLength(NewPointX);
+	WriteLength(NewPointY);
+	CloseForm(false);
+
+	OpenForm("pt",false);
+	PointRotate(Rectangle.x1,Rectangle.y2,Rectangle.angle,xCentre,yCentre);
+	WriteLength(NewPointX);
+	WriteLength(NewPointY);
+	CloseForm(false);
+
+	OpenForm("pt",false);
+	PointRotate(Rectangle.x1,Rectangle.y1,Rectangle.angle,xCentre,yCentre);
+	WriteLength(NewPointX);
+	WriteLength(NewPointY);
+	CloseForm(false);
+
+	CloseForm(false);
+	WriteLine();
+}
+
+void RectangleForm(UL_RECTANGLE Rectangle, char NotFilled)
+{
+	if (Rectangle.angle!=0.0)
+	{
+		RotatedRectangleForm(Rectangle);
+	}
+	else
+	{
+		OpenForm("pcbPoly",false);
+
+		OpenForm("pt",false);
+		WriteLength(Rectangle.x1);
+		WriteLength(Rectangle.y1);
+		CloseForm(false);
+
+		OpenForm("pt",false);
+		WriteLength(Rectangle.x2);
+		WriteLength(Rectangle.y1);
+		CloseForm(false);
+
+		OpenForm("pt",false);
+		WriteLength(Rectangle.x2);
+		WriteLength(Rectangle.y2);
+		CloseForm(false);
+
+		OpenForm("pt",false);
+		WriteLength(Rectangle.x1);
+		WriteLength(Rectangle.y2);
+		CloseForm(false);
+
+		OpenForm("pt",false);
+		WriteLength(Rectangle.x1);
+		WriteLength(Rectangle.y1);
+		CloseForm(false);
+		
+		if (NotFilled)
+		{
+			OpenForm("NotFilled",false);
+			CloseForm(false);
+		}
+
+		CloseForm(false);
+		WriteLine();
+	}
+}
+
+void RectangleKeepoutForm(UL_RECTANGLE Rectangle, string KeepoutType)
+{
+	OpenForm("lineKeepOut",false);
+
+	OpenForm("pt",false);
+	WriteLength(Rectangle.x1);
+	WriteLength(Rectangle.y1);
+	CloseForm(false);
+
+	OpenForm("pt",false);
+	WriteLength(Rectangle.x2);
+	WriteLength(Rectangle.y1);
+	CloseForm(false);
+
+	OpenForm("keepoutType",false);
+	WriteString(KeepoutType);
+	CloseForm(false);
+	
+	CloseForm(false);
+	WriteLine();
+
+	OpenForm("lineKeepOut",false);
+
+	OpenForm("pt",false);
+	WriteLength(Rectangle.x2);
+	WriteLength(Rectangle.y1);
+	CloseForm(false);
+
+	OpenForm("pt",false);
+	WriteLength(Rectangle.x2);
+	WriteLength(Rectangle.y2);
+	CloseForm(false);
+
+	OpenForm("keepoutType",false);
+	WriteString(KeepoutType);
+	CloseForm(false);
+	
+	CloseForm(false);
+	WriteLine();
+
+	OpenForm("lineKeepOut",false);
+
+	OpenForm("pt",false);
+	WriteLength(Rectangle.x2);
+	WriteLength(Rectangle.y2);
+	CloseForm(false);
+
+	OpenForm("pt",false);
+	WriteLength(Rectangle.x1);
+	WriteLength(Rectangle.y2);
+	CloseForm(false);
+
+	OpenForm("keepoutType",false);
+	WriteString(KeepoutType);
+	CloseForm(false);
+	
+	CloseForm(false);
+	WriteLine();
+
+	OpenForm("lineKeepOut",false);
+
+	OpenForm("pt",false);
+	WriteLength(Rectangle.x1);
+	WriteLength(Rectangle.y2);
+	CloseForm(false);
+
+	OpenForm("pt",false);
+	WriteLength(Rectangle.x1);
+	WriteLength(Rectangle.y1);
+	CloseForm(false);
+
+	OpenForm("keepoutType",false);
+	WriteString(KeepoutType);
+	CloseForm(false);
+	
+	CloseForm(false);
+	WriteLine();
+
+}
+
+void TextForm(UL_TEXT Text,string AttrName)
+{
+	if (strlen(AttrName))
+	{
+		OpenForm("attr",false);
+	}
+	else
+	{
+		OpenForm("text",false);
+	}
+
+	if (strlen(AttrName))
+	{
+		if (strupr(AttrName)==">NAME")
+		{
+			WriteQuotedString("RefDes");
+		}
+		else
+		if (strupr(AttrName)==">VALUE")
+		{
+			WriteQuotedString("Value");
+		}
+		else
+		{
+			WriteQuotedString(Text.value);
+		}
+		WriteQuotedString("");
+
+		OpenForm("pt",false);
+		WriteLength(Text.x);
+		WriteLength(Text.y);
+		CloseForm(false);
+
+		OpenForm("isVisible",false);
+		WriteString("True");
+		CloseForm(false);
+	}
+	else
+	{
+		OpenForm("pt",false);
+		WriteLength(Text.x);
+		WriteLength(Text.y);
+		CloseForm(false);
+
+		WriteQuotedString(Text.value);
+	}
+
+	OpenForm("textStyleRef",false);
+	string Style=FindTextStyle(Text.font,Text.size,Text.ratio);
+	WriteQuotedString(Style);
+	CloseForm(false);
+
+	if (Text.angle!=0)
+	{
+		OpenForm("rotation",false);
+		WriteReal(Text.angle);
+		CloseForm(false);
+	}
+
+	if (Text.mirror)
+	{
+		OpenForm("isFlipped",false);
+		WriteString("true");
+		CloseForm(false);
+	}
+
+	CloseForm(false);
+	WriteLine();
+}
+
+void TextOrAttrForm(UL_TEXT Text)
+{
+	string AttrName;
+	if (strchr(Text.value,'>')==0)
+	{
+		AttrName=Text.value;
+	}
+	TextForm(Text,AttrName);
+}
+
+void PolygonForm(UL_POLYGON Polygon)
+{
+	char First=true;
+	OpenForm("pcbPoly",true);
+	WriteLine();
+	
+	Polygon.wires(Wire)
+	{
+		if (First)
+		{
+			OpenForm("pt",false);
+			WriteLength(Wire.x1);
+			WriteLength(Wire.y1);
+			CloseForm(false);
+			WriteLine();
+			First=false;
+		}
+		OpenForm("pt",false);
+		WriteLength(Wire.x2);
+		WriteLength(Wire.y2);
+		CloseForm(false);
+		WriteLine();
+		if (Wire.curve!=0.0)
+		{
+			OpenForm("ang",false);
+			WriteReal(Wire.curve);
+			CloseForm(false);
+			WriteLine();
+		}
+	}
+
+	CloseForm(true);
+	WriteLine();
+}
+
+void AttributeForm(UL_ATTRIBUTE Attribute)
+{
+	OpenForm("attr",false);
+
+	WriteQuotedString(Attribute.name);
+	WriteQuotedString(Attribute.value);
+
+	CloseForm(false);
+	WriteLine();
+}
+
+void KeepoutPolygonForm(UL_POLYGON Polygon, string KeepoutType)
+{
+	char First=true;
+	OpenForm("polyKeepOut",true);
+	WriteLine();
+	
+	OpenForm("poly",true);
+	WriteLine();
+	
+	Polygon.wires(Wire)
+	{
+		if (First)
+		{
+			OpenForm("pt",false);
+			WriteLength(Wire.x1);
+			WriteLength(Wire.y1);
+			CloseForm(false);
+			WriteLine();
+			First=false;
+		}
+		OpenForm("pt",false);
+		WriteLength(Wire.x2);
+		WriteLength(Wire.y2);
+		CloseForm(false);
+		WriteLine();
+		if (Wire.curve!=0.0)
+		{
+			OpenForm("ang",false);
+			WriteReal(Wire.curve);
+			CloseForm(false);
+			WriteLine();
+		}
+	}
+
+	CloseForm(true);
+	WriteLine();
+	
+	OpenForm("keepoutType",false);
+	WriteString(KeepoutType);
+	CloseForm(false);
+	
+	CloseForm(true);
+	WriteLine();
+}
+
+void FlatCapArc(UL_ARC Arc,string NetName)
+{
+	int Point1X=Arc.xc;
+	int Point1Y=Arc.yc;
+	int Point2X;
+	int Point2Y;
+	int Point3X;
+	int Point3Y;
+	
+	PointOffset(Point1X,Point1Y,Arc.angle1,Arc.width);
+	Point2X=NewPointX;
+	Point2Y=NewPointY;
+	
+	PointOffset(Point1X,Point1Y,Arc.angle2,Arc.width);
+	Point3X=NewPointX;
+	Point3Y=NewPointY;
+	
+	OpenForm("pcbPoly",true);
+
+	OpenForm("pt",false);
+	WriteLength(Point1X);
+	WriteLength(Point1Y);
+	CloseForm(false);
+	WriteLine();
+
+	OpenForm("pt",false);
+	WriteLength(Point2X);
+	WriteLength(Point2Y);
+	CloseForm(false);
+	WriteLine();
+
+	OpenForm("pt",false);
+	WriteLength(Point3X);
+	WriteLength(Point3Y);
+	CloseForm(false);
+	WriteLine();
+
+	OpenForm("ang",false);
+	WriteReal(Arc.angle2-Arc.angle1);
+	CloseForm(false);
+	WriteLine();
+
+	OpenForm("pt",false);
+	WriteLength(Point1X);
+	WriteLength(Point1Y);
+	CloseForm(false);
+	WriteLine();
+
+	if (strlen(NetName))
+	{
+		OpenForm("netNameRef",false);
+		WriteQuotedString(NetName);
+		CloseForm(false);
+		WriteLine();
+	}
+
+	CloseForm(true);
+	WriteLine();
+}
+
+void ArcForm(UL_ARC Arc,string NetName)
+{
+	if (Arc.cap==CAP_FLAT &&
+	    Arc.width>Arc.radius)
+	{
+		FlatCapArc(Arc,NetName);
+	}
+	else
+	{
+		OpenForm("triplePointArc",false);
+
+		OpenForm("pt",false);
+		WriteLength(Arc.xc);
+		WriteLength(Arc.yc);
+		CloseForm(false);
+
+		OpenForm("pt",false);
+		WriteLength(Arc.x1);
+		WriteLength(Arc.y1);
+		CloseForm(false);
+
+		OpenForm("pt",false);
+		WriteLength(Arc.x2);
+		WriteLength(Arc.y2);
+		CloseForm(false);
+
+		OpenForm("width",false);
+		WriteLength(Arc.width);
+		CloseForm(false);
+
+		if (strlen(NetName))
+		{
+			OpenForm("netNameRef",false);
+			WriteQuotedString(NetName);
+			CloseForm(false);
+		}
+
+		CloseForm(false);
+		WriteLine();
+	}
+}
+
+string LogicName(string Original)
+{
+	string Name;
+	if (strlen(Original))
+	{
+		int Index=strchr(Original,'@');
+		if (Index!=-1)
+		{
+			Name=strsub(Original,0,Index);
+		}
+		else
+		{
+			Name=Original;
+		}
+	}
+	return(Name);
+}
+

@@ -1,0 +1,668 @@
+//Eagle Intermediate Format Style Routines
+
+int NumberPadStyles = 0;
+numeric string PadStyleName[];
+int PadStyleShape[];
+int PadStyleX[];
+int PadStyleY[];
+int PadStyleDrill[];
+int PadStyleLayer[];
+int PadStyleElongation[];
+real PadStyleAngle[];
+int PadStyleStartRange[];
+int PadStyleEndRange[];
+int PadStyleRoundness[];
+int PadShapeRectangle=99;
+int PadShapeSmdOval=98;
+int PadShapeRoundedRectangle=97;
+
+string NewPadStyleName(int ShapeType)
+{
+	string Name;
+	int i=0;
+	int Highest=-1;
+	
+	if (ShapeType==PAD_SHAPE_SQUARE)
+	{
+		Name = "Square";
+	}
+	else
+	if (ShapeType==PAD_SHAPE_ROUND)
+	{
+		Name = "Round";
+	}
+	else
+	if (ShapeType==PAD_SHAPE_OCTAGON)
+	{
+		Name = "Octagon";
+	}
+	else
+	if (ShapeType==PAD_SHAPE_LONG)
+	{
+		Name = "Oval";
+	}
+	else
+	if (ShapeType==PadShapeSmdOval)
+	{
+		Name = "Oval";
+	}
+	else
+	if (ShapeType==PadShapeRectangle)
+	{
+		Name = "Rectangle";
+	}
+	else
+	if (ShapeType==PadShapeRoundedRectangle)
+	{
+		Name = "RndRect";
+	}
+
+	for (i=0;
+	     i<NumberPadStyles;
+		 i++)
+	{
+		if (ShapeType==PAD_SHAPE_LONG ||
+			ShapeType==PadShapeSmdOval )
+		{
+			if (ShapeType==PAD_SHAPE_LONG)
+			{
+
+				if (PadStyleShape[i]==ShapeType||
+					PadStyleShape[i]==PadShapeSmdOval)
+				{
+					Highest = i;
+				}
+			}
+			else
+			{
+				if (PadStyleShape[i]==ShapeType||
+					PadStyleShape[i]==PAD_SHAPE_LONG)
+				{
+					Highest = i;
+				}
+			}
+		}
+		else
+		if (PadStyleShape[i]==ShapeType)
+		{
+			Highest = i;
+		}
+	}
+
+	int Index=1;
+	if (Highest>=0)
+	{
+		string IndexString=strsub(PadStyleName[Highest],strlen(Name));
+		Index = strtol(IndexString) + 1;
+	}
+
+	sprintf(Name,"%s%d",Name,Index);
+
+	return(Name);
+}
+
+void DrilledPadStyle(UL_PAD Pad)
+{
+	int i=0;
+	int Found=-1;
+
+	for (i=0;
+	     (i<NumberPadStyles) && (Found==-1);
+		 i++)
+	{
+		if (PadStyleShape[i]==Pad.shape[LAYER_TOP] &&
+			PadStyleX[i]==Pad.diameter[LAYER_TOP] &&
+		    PadStyleDrill[i]==Pad.drill &&
+			PadStyleY[i]==0 &&
+			PadStyleElongation[i]==Pad.elongation &&
+			PadStyleAngle[i]==Pad.angle &&
+			PadStyleLayer[i]==0 &&
+			PadStyleStartRange[i]==0 &&
+			PadStyleEndRange[i]==0 &&
+			PadStyleRoundness[i]==0)
+		{
+			Found = i;
+		}
+	}
+
+	if (Found==-1)
+	{
+		PadStyleName[NumberPadStyles]=NewPadStyleName(Pad.shape[LAYER_TOP]);
+		PadStyleShape[NumberPadStyles]=Pad.shape[LAYER_TOP];
+		PadStyleX[NumberPadStyles]=Pad.diameter[LAYER_TOP];
+		PadStyleDrill[NumberPadStyles]=Pad.drill;
+		PadStyleY[NumberPadStyles]=0;
+		PadStyleElongation[NumberPadStyles]=Pad.elongation;
+		PadStyleAngle[NumberPadStyles]=Pad.angle;
+		PadStyleLayer[NumberPadStyles]=0;
+		PadStyleStartRange[NumberPadStyles]=0;
+		PadStyleEndRange[NumberPadStyles]=0;
+		PadStyleRoundness[NumberPadStyles]==0;
+		NumberPadStyles++;
+	}
+}
+
+void NonDrilledPadStyle(UL_SMD Pad)
+{
+	int i=0;
+	int Found=-1;
+	int DX=Pad.dx;
+	int DY=Pad.dy;
+	int ShapeType=PadShapeRectangle;
+	int Roundness=Pad.roundness;
+	
+	if (board || library)
+	{
+		if (Pad.angle==90.0 ||
+		    Pad.angle==270.0)
+		{
+			int Temp=DX;
+			DX=DY;
+			DY=Temp;
+	    }
+	}
+
+	if (Roundness!=0)
+	{
+		if (Pad.roundness==100)
+		{
+			if (Pad.dx==Pad.dy)
+			{
+				ShapeType=PAD_SHAPE_ROUND;
+				Roundness=0;
+			}
+			else
+			{
+				ShapeType=PadShapeSmdOval;
+			}
+		}
+		else
+		{
+			ShapeType=PadShapeRoundedRectangle;
+		}
+	}
+	
+	for (i=0;
+	     (i<NumberPadStyles) && (Found==-1);
+		 i++)
+	{
+		if (PadStyleShape[i]==ShapeType &&
+			PadStyleX[i]==DX &&
+			PadStyleY[i]==DY &&
+			PadStyleLayer[i]==Pad.layer &&
+			PadStyleAngle[i]==Pad.angle &&
+			PadStyleDrill[i]==0 &&
+			PadStyleElongation[i]==0 &&
+			PadStyleStartRange[i]==0 &&
+			PadStyleEndRange[i]==0 &&
+			PadStyleRoundness[i]==Roundness)
+		{
+			Found = i;
+		}
+	}
+
+	if (Found==-1)
+	{
+		PadStyleName[NumberPadStyles]=NewPadStyleName(ShapeType);
+		PadStyleShape[NumberPadStyles]=ShapeType;
+		PadStyleX[NumberPadStyles]=DX;
+		PadStyleY[NumberPadStyles]=DY;
+		PadStyleDrill[NumberPadStyles]=0;
+		PadStyleLayer[NumberPadStyles]=Pad.layer;
+		PadStyleElongation[NumberPadStyles]=0;
+		PadStyleAngle[NumberPadStyles]=Pad.angle;
+		PadStyleStartRange[NumberPadStyles]=0;
+		PadStyleEndRange[NumberPadStyles]=0;
+		PadStyleRoundness[NumberPadStyles]=Roundness;
+//		if (PadStyleName[NumberPadStyles]=="Oval2")
+//		{
+//			string Message;
+//			sprintf(Message,"ShapeType %d X %d Y %d L %d Ang %g",ShapeType,DX,DY,Pad.layer,Pad.angle);
+//			dlgMessageBox(Message);
+//		}
+		NumberPadStyles++;
+	}
+		 
+}
+
+void ViaPadStyle(UL_VIA Via)
+{
+	int i=0;
+	int Found=-1;
+
+	for (i=0;
+	     (i<NumberPadStyles) && (Found==-1);
+		 i++)
+	{
+		if (PadStyleShape[i]==Via.shape[LAYER_TOP] &&
+			PadStyleX[i]==Via.diameter[LAYER_TOP] &&
+		    PadStyleDrill[i]==Via.drill &&
+			PadStyleY[i]==0 &&
+			PadStyleElongation[i]==0 &&
+			PadStyleAngle[i]==0 &&
+			PadStyleLayer[i]==0 &&
+			PadStyleStartRange[i]==Via.start &&
+			PadStyleEndRange[i]==Via.end &&
+			PadStyleRoundness[i]==0)
+		{
+			Found = i;
+		}
+	}
+
+	if (Found==-1)
+	{
+		PadStyleName[NumberPadStyles]=NewPadStyleName(Via.shape[LAYER_TOP]);
+		PadStyleShape[NumberPadStyles]=Via.shape[LAYER_TOP];
+		PadStyleX[NumberPadStyles]=Via.diameter[LAYER_TOP];
+		PadStyleDrill[NumberPadStyles]=Via.drill;
+		PadStyleY[NumberPadStyles]=0;
+		PadStyleLayer[NumberPadStyles]=0;
+		PadStyleElongation[NumberPadStyles]=0;
+		PadStyleAngle[NumberPadStyles]=0.0;
+		PadStyleStartRange[NumberPadStyles]=Via.start;
+		PadStyleEndRange[NumberPadStyles]=Via.end;
+		PadStyleRoundness[NumberPadStyles]=0;
+		NumberPadStyles++;
+	}
+}
+
+void HolePadStyle(UL_HOLE Hole)
+{
+	int i=0;
+	int Found=-1;
+
+	for (i=0;
+	     (i<NumberPadStyles) && (Found==-1);
+		 i++)
+	{
+		if (PadStyleShape[i]==PAD_SHAPE_ROUND &&
+			PadStyleX[i]==Hole.diameter[LAYER_TSTOP] &&
+		    PadStyleDrill[i]==Hole.drill &&
+			PadStyleY[i]==0 &&
+			PadStyleLayer[i]==0 &&
+			PadStyleAngle[i]==0 &&
+			PadStyleElongation[i]==0 &&
+			PadStyleStartRange[i]==0 &&
+			PadStyleEndRange[i]==0 &&
+			PadStyleRoundness[i]==0)
+		{
+			Found = i;
+		}
+	}
+
+	if (Found==-1)
+	{
+		PadStyleName[NumberPadStyles]=NewPadStyleName(PAD_SHAPE_ROUND);
+		PadStyleShape[NumberPadStyles]=PAD_SHAPE_ROUND;
+		PadStyleX[NumberPadStyles]=Hole.diameter[LAYER_TSTOP];
+		PadStyleDrill[NumberPadStyles]=Hole.drill;
+		PadStyleY[NumberPadStyles]=0;
+		PadStyleLayer[NumberPadStyles]=0;
+		PadStyleElongation[NumberPadStyles]=0;
+		PadStyleAngle[NumberPadStyles]=0.0;
+		PadStyleStartRange[NumberPadStyles]=0;
+		PadStyleEndRange[NumberPadStyles]=0;
+		PadStyleRoundness[NumberPadStyles]=0;
+		NumberPadStyles++;
+	}
+}
+
+string FindPadStyle(int ShapeType, int XSize, int YSize, int drill, int Layer, int Elongation, real Angle, int StartRange, int EndRange, int Roundness)
+{
+	int i=0;
+	int Found=-1;
+	
+	if (board || library)
+	{
+		if (ShapeType==PadShapeRectangle ||
+		    ShapeType==PadShapeSmdOval ||
+		    ShapeType==PadShapeRoundedRectangle)
+		{
+			if (Angle==90.0 ||
+				Angle==270.0)
+			{
+				int Temp=XSize;
+				XSize=YSize;
+				YSize=Temp;
+			}
+		}
+	}
+
+	for (i=0;
+	     (i<NumberPadStyles) && (Found==-1);
+		 i++)
+	{
+		if (PadStyleShape[i]==ShapeType &&
+			PadStyleX[i]==XSize &&
+			PadStyleY[i]==YSize &&
+		    PadStyleDrill[i]==drill &&
+			PadStyleLayer[i]==Layer &&
+		    PadStyleElongation[i]==Elongation &&
+			PadStyleAngle[i]==Angle &&
+			PadStyleStartRange[i]==StartRange &&
+			PadStyleEndRange[i]==EndRange &&
+			PadStyleRoundness[i]==Roundness)
+		{
+			Found = i;
+		}
+	}
+	
+	if (Found==-1)
+	{
+		string Message;
+		sprintf(Message,"ShapeType %d X %d Y %d Dr %d L %d E %d Ang %g SR %d ER %d Rnd %d",ShapeType,XSize,YSize,drill,Layer,Elongation,Angle,StartRange,EndRange,Roundness);
+		dlgMessageBox(Message);
+	}
+
+	return(PadStyleName[Found]);
+}
+
+void FootprintPadStyles(UL_PACKAGE Footprint)
+{
+	Footprint.contacts(Pad)
+	{
+		if (Pad.pad)
+		{
+			DrilledPadStyle(Pad.pad);
+		}
+		if (Pad.smd)
+		{
+			NonDrilledPadStyle(Pad.smd);
+		}
+	}
+	Footprint.holes(Hole)
+	{
+		HolePadStyle(Hole);
+	}
+}
+
+int NumberTextStyles=0;
+numeric string TextStyleName[];
+int TextStyleFont[];
+int TextStyleHeight[];
+int TextStyleRatio[];
+int NextTextStyleIndex;
+
+string NewTextStyleName()
+{
+	string Name;
+
+	sprintf(Name,"Style%d",NextTextStyleIndex++);
+
+	return(Name);
+}
+
+void TextStyle(UL_TEXT Text)
+{
+	int i=0;
+	int Found=-1;
+
+	for (i=0;
+	     (i<NumberTextStyles) && (Found==-1);
+		 i++)
+	{
+		if (TextStyleFont[i]==Text.font &&
+			TextStyleHeight[i]==Text.size &&
+		    TextStyleRatio[i]==Text.ratio)
+		{
+			Found = i;
+		}
+	}
+
+	if (Found==-1)
+	{
+		TextStyleName[NumberTextStyles]=NewTextStyleName();
+		TextStyleFont[NumberTextStyles]=Text.font;
+		TextStyleHeight[NumberTextStyles]=Text.size;
+		TextStyleRatio[NumberTextStyles]=Text.ratio;
+		NumberTextStyles++;
+	}
+}
+
+string FindTextStyle(int Font, int Height, int Ratio)
+{
+	int i=0;
+	int Found=-1;
+
+	for (i=0;
+	     (i<NumberTextStyles) && (Found==-1);
+		 i++)
+	{
+		if (TextStyleFont[i]==Font &&
+			TextStyleHeight[i]==Height &&
+			TextStyleRatio[i]==Ratio)
+		{
+			Found = i;
+		}
+	}
+
+	return(TextStyleName[Found]);
+}
+
+void FootprintTextStyles(UL_PACKAGE Footprint)
+{
+	Footprint.texts(Text)
+	{
+		TextStyle(Text);
+	}
+}
+
+void SymbolTextStyles(UL_SYMBOL Symbol)
+{
+	Symbol.texts(Text)
+	{
+		TextStyle(Text);
+	}
+
+	Symbol.pins(Pin)
+	{
+		Pin.texts(Text)
+		{
+			TextStyle(Text);
+		}
+	}
+}
+
+void OutputPadStyles()
+{
+	int i;
+	
+	for (i=0;
+	     i<NumberPadStyles;
+		 i++)
+	{
+		OpenForm("padStyleDef",true);
+		WriteQuotedString(PadStyleName[i]);
+		WriteLine();
+
+			OpenForm("holeDiam",false);
+			WriteLength(PadStyleDrill[i]);
+			CloseForm(false);
+			WriteLine();
+
+			if (PadStyleStartRange[i]!=0)
+			{
+				OpenForm("StartRange",false);
+				WriteInt(PadStyleStartRange[i]);
+				CloseForm(false);
+				WriteLine();
+				
+				OpenForm("EndRange",false);
+				WriteInt(PadStyleEndRange[i]);
+				CloseForm(false);
+				WriteLine();
+			}
+
+			OpenForm("padShape",false);
+
+				OpenForm("layerNumRef",false);
+				if (PadStyleLayer[i]==0)
+				{
+					WriteInt(1);
+				}
+				else
+				{
+					WriteInt(PadStyleLayer[i]);
+				}
+				CloseForm(false);
+
+				OpenForm("padShapeType",false);
+				if (PadStyleShape[i]==PAD_SHAPE_ROUND)
+				{
+					WriteString("Ellipse");
+				}
+				else
+				if (PadStyleShape[i]==PAD_SHAPE_OCTAGON)
+				{
+					WriteString("Octagon");
+				}
+				else
+				if (PadStyleShape[i]==PAD_SHAPE_LONG)
+				{
+					WriteString("Oval");
+				}
+				else
+				if (PadStyleShape[i]==PadShapeRoundedRectangle)
+				{
+					WriteString("RndRect");
+				}
+				else
+				{
+					WriteString("Rect");
+				}
+				CloseForm(false);
+
+				if (PadStyleShape[i]!=PAD_SHAPE_LONG)
+				{
+					OpenForm("shapeWidth",false);
+					WriteLength(PadStyleX[i]);
+					CloseForm(false);
+
+					OpenForm("shapeHeight",false);
+					if (!PadStyleY[i])
+					{
+						WriteLength(PadStyleX[i]);
+					}
+					else
+					{
+						WriteLength(PadStyleY[i]);
+					}
+					CloseForm(false);
+					if (PadStyleRoundness[i])
+					{
+						OpenForm("roundness",false);
+						WriteInt(PadStyleRoundness[i]);
+						CloseForm(false);
+					}
+
+				}
+				else
+				{
+					OpenForm("shapeWidth",false);
+					WriteLength(PadStyleX[i]);
+					CloseForm(false);
+
+					OpenForm("shapeHeight",false);
+					WriteLength(PadStyleX[i]+((PadStyleX[i]*PadStyleElongation[i])/100));
+					CloseForm(false);
+					
+				}
+
+			CloseForm(false);
+			WriteLine();
+
+			if (PadStyleDrill[i]==0)
+			{
+				OpenForm("padShape",false);
+
+					OpenForm("layerNumRef",false);
+					if (PadStyleLayer[i]==1)
+					{
+						WriteInt(16);
+					}
+					else
+					{
+						WriteInt(1);
+					}
+					CloseForm(false);
+
+					OpenForm("padShapeType",false);
+					WriteString("Ellipse");
+					CloseForm(false);
+
+					OpenForm("shapeWidth",false);
+					WriteLength(0);
+					CloseForm(false);
+
+					OpenForm("shapeHeight",false);
+					WriteLength(0);
+					CloseForm(false);
+
+				CloseForm(false);
+				WriteLine();
+			}
+
+		CloseForm(true);
+	}
+
+}
+
+void OutputTextStyles()
+{
+	int i;
+	for (i=0;
+	     i<NumberTextStyles;
+		 i++)
+	{
+		OpenForm("textStyleDef",true);
+		WriteQuotedString(TextStyleName[i]);
+		WriteLine();
+
+		OpenForm("font",true);
+		WriteLine();
+
+		OpenForm("fontType",false);
+		if (TextStyleFont[i]==FONT_VECTOR)
+		{
+			WriteString("Stroke");
+		}
+		else
+		{
+			//Bodge for moment
+			WriteString("Stroke");
+		}
+		CloseForm(false);
+		WriteLine();
+
+		OpenForm("fontFace",false);
+		if (TextStyleFont[i]==FONT_VECTOR)
+		{
+			WriteQuotedString("Quality");
+		}
+		else
+		if (TextStyleFont[i]==FONT_FIXED)
+		{
+			WriteQuotedString("Courier");
+		}
+		else
+		{
+			WriteQuotedString("Helvetica");
+		}
+		CloseForm(false);
+		WriteLine();
+
+		OpenForm("fontHeight",false);
+		WriteLength(TextStyleHeight[i]);
+		CloseForm(false);
+		WriteLine();
+
+		OpenForm("strokeWidth",false);
+		WriteLength((TextStyleHeight[i]*TextStyleRatio[i])/100);
+		CloseForm(false);
+		WriteLine();
+
+		CloseForm(true);
+
+		CloseForm(true);
+	}
+}

@@ -1,0 +1,953 @@
+// Eagle Board to Intermediate format
+
+#include "Output.ulp"
+
+#include "Styles.ulp"
+
+#include "Layers.ulp"
+
+#include "ShapesText.ulp"
+
+#include "Symbols.ulp"
+
+#include "Footprints.ulp"
+
+#include "Parts.ulp"
+
+numeric string UsedFootprints[];
+int UsedFootprintCount=0;
+
+void GetUsedFootprints()
+{
+	board(Board)
+	{
+		Board.elements(Component)
+		{
+			string FootprintName=Component.package.name;
+			char Found=false;
+			int i;
+			for (i=0;
+				 (i<UsedFootprintCount) &&!Found;
+				 i++)
+			{
+				if (UsedFootprints[i]==FootprintName)
+				{
+					Found = true;
+				}
+			}
+			if (!Found)
+			{
+				UsedFootprints[UsedFootprintCount++]=FootprintName;
+			}
+		}
+	}
+}
+
+char IsFootprintUsed(UL_PACKAGE Footprint)
+{
+/*	char Found=false;
+	int i;
+	for (i=0;
+	     i<UsedFootprintCount && !Found;
+		 i++)
+	{
+		if (UsedFootprints[i]==Footprint.name)
+		{
+			Found = true;
+		}
+	}
+	return(Found);*/
+	return(true);
+}
+
+void PadStyles(void)
+{
+	board(Board)
+	{
+		Board.libraries(Library)
+		{
+			Library.packages(Footprint)
+			{
+				if (IsFootprintUsed(Footprint))
+				{
+					FootprintPadStyles(Footprint);
+				}
+			}
+		}
+		Board.signals(Net)
+		{
+			Net.vias(Via)
+			{
+				ViaPadStyle(Via);
+			}
+		}
+		Board.holes(Hole)
+		{
+			HolePadStyle(Hole);
+		}
+	}
+
+	OutputPadStyles();
+}
+
+void TextStyles(void)
+{
+	board(Board)
+	{
+		Board.libraries(Library)
+		{
+			Library.packages(Footprint)
+			{
+				if (IsFootprintUsed(Footprint))
+				{
+					FootprintTextStyles(Footprint);
+				}
+			}
+		}
+		Board.texts(Text)
+		{
+			TextStyle(Text);
+		}
+		Board.elements(Component)
+		{
+			Component.texts(Text)
+			{
+				TextStyle(Text);
+			}
+			Component.attributes(Attr)
+			{
+				TextStyle(Attr.text);
+			}
+		}
+	}
+
+	OutputTextStyles();
+
+}
+
+void Footprints(void)
+{
+	board(Board)
+	{
+		Board.libraries(Library)
+		{
+			Library.packages(Footprint)
+			{
+				if (IsFootprintUsed(Footprint))
+				{
+					FootprintForm(Footprint);
+				}
+			}
+		}
+	}
+}
+
+numeric string ComponentPartNames[];
+
+void Parts(void)
+{
+	board(Board)
+	{
+		Board.elements(Component)
+		{
+			//For the moment assume that there is a schematic
+			if (project.schematic)
+			{
+				char ScmPartFound=false;
+				project.schematic(Schematic)
+				{
+					Schematic.parts(ScmComponent)
+					{
+						if (ScmComponent.name==Component.name)
+						{
+							string PartName=ScmComponent.device.name;
+							string LibraryName=ScmComponent.device.library;
+							char Found=false;
+							char IncludeLibraryName=false;
+							int i;
+							for (i=0;
+								 (i<NumberParts) &&!Found;
+								 i++)
+							{
+								if (PartNames[i]==PartName)
+								{
+									if (LibraryNames[i]==LibraryName)
+									{
+										Found = true;
+									}
+									else
+									{
+										IncludeLibraryName=true;
+									}
+								}
+							}
+							if (!Found)
+							{
+								LibraryNames[NumberParts]=LibraryName;
+								PartNames[NumberParts++]=PartName;
+								string UseThisFootprint;
+								if (ScmComponent.device.package.name!=Component.package.name)
+								{
+									UseThisFootprint=Component.package.name;
+								}
+								PartForm(ScmComponent.device,"",IncludeLibraryName,UseThisFootprint);
+							}
+							//Save the part name for later
+							if (IncludeLibraryName)
+							{
+								ComponentPartNames[NumberComponents++]=PartName+LibraryName;
+							}
+							else
+							{
+								ComponentPartNames[NumberComponents++]=PartName;
+							}
+							ScmPartFound = true;
+						}
+					}
+				}
+
+				if (!ScmPartFound)
+				{
+					ComponentPartNames[NumberComponents++]="PcbOnly";
+				}
+			}
+			else
+			{
+				string PartName=Component.package.name;
+				char Found=false;
+				int i;
+				for (i=0;
+					 (i<NumberParts) &&!Found;
+					 i++)
+				{
+					if (PartNames[i]==PartName)
+					{
+						Found = true;
+					}
+				}
+				if (!Found)
+				{
+					PartNames[NumberParts++]=PartName;
+					FootprintPartForm(Component.package);
+				}
+				//Save the part name for later
+				ComponentPartNames[NumberComponents++]=PartName;
+			}
+		}
+	}
+}
+
+void LibraryForm()
+{
+	GetUsedFootprints();
+
+	OpenForm("library",true);
+	WriteString("Library_1");
+	WriteLine();
+	PadStyles();
+	TextStyles();
+	Footprints();
+	Parts();
+	CloseForm(true);
+}
+
+void HeaderForm()
+{
+	board(Board)
+	{
+		Units = Board.grid.unit;
+
+		WriteString("EAGLE_INTERMEDIATE_ASCII");
+		WriteQuotedString(Board.name);
+		WriteLine();
+		WriteLine();
+
+		OpenForm("asciiHeader",true);
+		WriteLine();
+
+		OpenForm("fileUnits",false);
+		if (Board.grid.unit==GRID_UNIT_MM)
+		{
+			WriteString("MM");
+		}
+		else
+		if (Board.grid.unit==GRID_UNIT_MIL)
+		{
+			WriteString("MIL");
+		}
+		else
+		if (Board.grid.unit==GRID_UNIT_INCH)
+		{
+			WriteString("IN");
+		}
+		else
+		if (Board.grid.unit==GRID_UNIT_MIC)
+		{
+			WriteString("MIC");
+		}
+		CloseForm(false);
+		WriteLine();
+
+		CloseForm(true);
+	}
+}
+
+void Components()
+{
+	int ComponentIndex=0;
+	board(Board)
+	{
+		Board.elements(Component)
+		{
+			OpenForm("compInst",true);
+			WriteQuotedString(Component.name);
+			WriteLine();
+
+			OpenForm("compRef",false);
+			WriteQuotedString(ComponentPartNames[ComponentIndex]);
+			CloseForm(false);
+			WriteLine();
+
+			OpenForm("compValue",false);
+			WriteQuotedString(Component.value);
+			CloseForm(false);
+			WriteLine();
+
+			CloseForm(true);
+			ComponentIndex++;
+		}
+	}
+}
+
+void NodeForm(UL_CONTACTREF Node)
+{
+    if (Node.element && Node.contact) // 23692
+    {
+        OpenForm("node",false);
+        WriteQuotedString(Node.element.name);
+        WriteQuotedString(Node.contact.name);
+        CloseForm(false);
+        WriteLine();
+    }
+}
+
+void NetForm(UL_SIGNAL Net)
+{
+	OpenForm("net",true);
+	WriteQuotedString(Net.name);
+	WriteLine();
+	Net.contactrefs(Node)
+	{
+		NodeForm(Node);
+	}
+	CloseForm(true);
+}
+
+void Nets()
+{
+	board(Board)
+	{
+		Board.signals(Net)
+		{
+			NetForm(Net);
+		}
+	}
+}
+
+void NetClassForm(UL_CLASS NetClass)
+{
+	if (strlen(NetClass.name))
+	{
+		OpenForm("netClass",true);
+		WriteQuotedString(NetClass.name);
+		WriteLine();
+		board(Board)
+		{
+			Board.signals(Net)
+			{
+				if (strlen(Net.class.name))
+				{
+					if (Net.class.name==NetClass.name)
+					{
+						OpenForm("netNameRef",false);
+						WriteQuotedString(Net.name);
+						CloseForm(false);
+						WriteLine();
+					}
+				}
+			}
+		}
+		if (NetClass.clearance)
+		{
+			OpenForm("attr",false);
+			WriteQuotedString("LineToLineClearance");
+			WriteLength(NetClass.clearance);
+			CloseForm(false);
+			WriteLine();
+			OpenForm("attr",false);
+			WriteQuotedString("PadToLineClearance");
+			WriteLength(NetClass.clearance);
+			CloseForm(false);
+			WriteLine();
+			OpenForm("attr",false);
+			WriteQuotedString("ViaToLineClearance");
+			WriteLength(NetClass.clearance);
+			CloseForm(false);
+			WriteLine();
+		}
+		if (NetClass.width)
+		{
+			OpenForm("attr",false);
+			WriteQuotedString("width");
+			WriteLength(NetClass.width);
+			CloseForm(false);
+			WriteLine();
+		}
+		if (NetClass.drill)
+		{
+			OpenForm("attr",false);
+			WriteQuotedString("MinViaDiameter");
+			WriteLength(NetClass.drill);
+			CloseForm(false);
+			WriteLine();
+		}
+		CloseForm(true);
+	}
+}
+
+void NetClasses()
+{
+	board(Board)
+	{
+		Board.classes(NetClass)
+		{
+			NetClassForm(NetClass);
+		}
+	}
+}
+
+void Attributes()
+{
+	board(Board)
+	{
+		char First=true;
+		Board.attributes(Attribute)
+		{
+			if (First)
+			{
+				OpenForm("globalAttrs",true);
+				WriteLine();
+				First=false;
+			}
+			AttributeForm(Attribute);
+		}
+		if (!First)
+		{
+			CloseForm(true);
+		}
+	}
+}
+
+void NetlistForm()
+{
+	OpenForm("netlist",true);
+	WriteString("Netlist_1");
+	WriteLine();
+	Attributes();
+	Components();
+	Nets();
+	NetClasses();
+	CloseForm(true);
+}
+
+numeric string LayerNames[] =
+	{	"","","","","","","","","","","","","","","","","",
+	    "Board","Top Silk","Bot Silk","Top Mask","Bot Mask","Top Paste","Bot Paste",
+		"Top Finish","Bot Finish","Top Glue","Bot Glue","Top Assy","Bot Assy","Documentation","Top Doc","Bot Doc"};
+
+char LayerOutput[] =
+	{	false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false,
+	    false, false, false, false, false, false, false, 
+		false, false, false, false, false, false, false};
+
+
+string GetLayerName(UL_LAYER Layer)
+{
+	string Name;
+
+	if ((Layer.number>=1&&Layer.number<=16) ||
+	    (Layer.number>52))
+	{
+		Name=Layer.name;
+	}
+	else
+	{
+		Name=LayerNames[MapLayer(Layer.number)];
+	}
+
+	return(Name);
+}
+
+void LayerForm(UL_LAYER Layer)
+{
+	if (Layer.used)
+	{
+		int MappedLayer=MapLayer(Layer.number);
+		if (MappedLayer>0)
+		{
+			if (!LayerOutput[MappedLayer])
+			{
+				LayerOutput[MappedLayer]=true;
+
+				OpenForm("layerDef",true);
+				WriteQuotedString(GetLayerName(Layer));
+				WriteLine();
+
+				OpenForm("layerNum",false);
+				WriteInt(MappedLayer);
+				CloseForm(false);
+				WriteLine();
+
+				string LayerType="NonSignal";
+
+				if (Layer.number>=1 &&
+					Layer.number<=16)
+				{
+					if (strchr(Layer.name,'$')!=-1) // 35541 look for $ at any position in name
+					{
+						LayerType="Power";
+					}
+					else
+					{
+						LayerType="Signal";
+					}
+				}
+				OpenForm("layerType",false);
+				WriteString(LayerType);
+				CloseForm(false);
+				WriteLine();
+
+				if (Layer.number>1 &&
+					Layer.number<16)
+				{
+					if (strchr(Layer.name,'$')==0)
+					{
+						OpenForm("netNameRef",false);
+						WriteString(strsub(Layer.name,1));
+						CloseForm(false);
+						WriteLine();
+					}
+				}
+				CloseForm(true);
+			}
+		}
+	}
+}
+
+void Layers()
+{
+	board(Board)
+	{
+		Board.layers(Layer)
+		{
+			LayerForm(Layer);
+		}
+	}
+}
+
+void Vias(UL_SIGNAL Net)
+{
+	Net.vias(Via)
+	{
+		OpenForm("via",false);
+
+		OpenForm("viaStyleRef",false);
+		WriteQuotedString(FindPadStyle(Via.shape[LAYER_TOP],Via.diameter[LAYER_TOP],0,Via.drill,0,0,0.0,Via.start,Via.end,0));
+		CloseForm(false);
+
+		OpenForm("pt",false);
+		WriteLength(Via.x);
+		WriteLength(Via.y);
+		CloseForm(false);
+
+		OpenForm("netNameRef",false);
+		WriteQuotedString(Net.name);
+		CloseForm(false);
+
+		CloseForm(false);
+		WriteLine();
+	}
+}
+
+void ComponentAttrForm(UL_ELEMENT Component,UL_TEXT Attr,string AttributeName,string AttributeValue,char Visible)
+{
+	string AttrName;
+	if (strlen(AttributeName))
+	{
+		if (Component.name!=Attr.value &&
+		    Component.value!=Attr.value)
+		{
+			AttrName=AttributeName;
+		}
+	}
+	else
+	{
+		if (Component.name==Attr.value)
+		{
+			AttrName="RefDes";
+		}
+		else
+		if (Component.value==Attr.value)
+		{
+			AttrName="Value";
+		}
+	}
+	if (strlen(AttrName))
+	{
+		OpenForm("attr",false);
+
+		WriteQuotedString(AttrName);
+		if (strlen(AttributeName))
+		{
+			WriteQuotedString(AttributeValue);
+		}
+		else
+		{
+			WriteQuotedString("");
+		}
+
+		OpenForm("pt",false);
+		WriteLength(Attr.x-Component.x);
+		WriteLength(Attr.y-Component.y);
+		CloseForm(false);
+
+		OpenForm("isVisible",false);
+		if (Visible)
+		{
+			WriteString("True");
+		}
+		else
+		{
+			WriteString("False");
+		}
+		CloseForm(false);
+
+		OpenForm("textStyleRef",false);
+		string Style=FindTextStyle(Attr.font,Attr.size,Attr.ratio);
+		WriteQuotedString(Style);
+		CloseForm(false);
+
+		if (Attr.angle!=0)
+		{
+			OpenForm("rotation",false);
+			WriteReal(Attr.angle);
+			CloseForm(false);
+		}
+
+		if (Attr.mirror)
+		{
+			OpenForm("isFlipped",false);
+			WriteString("true");
+			CloseForm(false);
+		}
+
+		CloseForm(false);
+		WriteLine();
+	}
+}
+
+void SymbolInstance(UL_ELEMENT Component)
+{
+	OpenForm("pattern",false);
+
+	OpenForm("patternRef",false);
+	WriteQuotedString(Component.package.name);
+	CloseForm(false);
+	
+	OpenForm("refDesRef",false);
+	WriteQuotedString(Component.name);
+	CloseForm(false);
+	
+	OpenForm("pt",false);
+	WriteLength(Component.x);
+	WriteLength(Component.y);
+	CloseForm(false);
+	
+	if (Component.angle!=0)
+	{
+		OpenForm("rotation",false);
+		WriteReal(Component.angle);
+		CloseForm(false);
+	}
+	
+	if (Component.mirror)
+	{
+		OpenForm("isFlipped",false);
+		WriteString("true");
+		CloseForm(false);
+	}
+
+	Component.texts(Attr1)
+	{
+		ComponentAttrForm(Component,Attr1,"","",true);
+	}
+	
+	Component.attributes(Attr2)
+	{
+		ComponentAttrForm(Component,Attr2.text,Attr2.name,Attr2.value,Attr2.display!=ATTRIBUTE_DISPLAY_FLAG_OFF);
+	}
+	
+	CloseForm(false);
+	WriteLine();
+}
+
+void MultiLayer()
+{
+	board(Board)
+	{
+		OpenForm("multiLayer",true);
+		WriteLine();
+		Board.signals(Net)
+		{
+			Vias(Net);
+		}
+		Board.elements(Component)
+		{
+			SymbolInstance(Component);
+		}
+		Board.holes(Hole)
+		{
+			HoleForm(Hole);
+		}
+		CloseForm(true);
+	}
+}
+
+void TemplateForm(UL_POLYGON Template, string NetName)
+{
+	OpenForm("copperPour95",true);
+	WriteLine();
+
+	OpenForm("pourType",false);
+	if (Template.pour==POLYGON_POUR_SOLID)
+	{
+		WriteString("SolidPour");
+	}
+	else
+	{
+		WriteString("Hatch90Pour");
+	}
+	CloseForm(false);
+	WriteLine();
+
+	if (strlen(NetName))
+	{
+		OpenForm("netNameRef",false);
+		WriteString(NetName);
+		CloseForm(false);
+		WriteLine();
+	}
+
+	OpenForm("width",false);
+	WriteLength(Template.width);
+	CloseForm(false);
+	WriteLine();
+
+	OpenForm("pourSpacing",false);
+	WriteLength(Template.spacing);
+	CloseForm(false);
+	WriteLine();
+
+	OpenForm("thermalType",false);
+	WriteString("Therm90");
+	CloseForm(false);
+	WriteLine();
+
+	OpenForm("thermalSpokes",false);
+	if (Template.thermals)
+	{
+		WriteInt(4);
+	}
+	else
+	{
+		WriteInt(0);
+	}
+	CloseForm(false);
+	WriteLine();
+
+	OpenForm("pcbPoly",true);
+	WriteLine();
+	
+	Template.wires(Wire)
+	{
+		OpenForm("pt",false);
+		WriteLength(Wire.x1);
+		WriteLength(Wire.y1);
+		CloseForm(false);
+		WriteLine();
+	}
+
+	CloseForm(true);
+
+	CloseForm(true);
+}
+
+void LayeredInfo()
+{
+	board(Board)
+	{
+		Board.layers(Layer)
+		{
+			int MappedLayer=MapLayer(Layer.number);
+			if (MappedLayer>0)
+			{
+				LayerFormStarted = false;
+				Board.signals(Net)
+				{
+					Net.wires(Line)
+					{
+						if (Line.layer==Layer.number)
+						{
+							StartLayerContentsForm(Layer);
+							if (Line.arc)
+							{
+								ArcForm(Line.arc,Net.name);
+							}
+							else
+							{
+								LineForm(Line,Net.name,"");
+							}
+						}
+					}
+
+					Net.polygons(Template)
+					{
+						if (Template.layer==Layer.number)
+						{
+							StartLayerContentsForm(Layer);
+							TemplateForm(Template,Net.name);
+						}
+					}
+				}
+				Board.wires(Line)
+				{
+					if (Line.layer==Layer.number)
+					{
+						if (Line.arc)
+						{
+							StartLayerContentsForm(Layer);
+							ArcForm(Line.arc,"");
+						}
+						else
+						{
+							StartLayerContentsForm(Layer);
+							if (IsKeepoutLayer(Layer.number))
+							{
+								LineForm(Line,"",KeepoutType(Layer.number));
+							}
+							else
+							{
+								LineForm(Line,"","");
+							}
+						}
+					}
+				}
+				Board.circles(Circle)
+				{
+					if (Circle.layer==Layer.number)
+					{
+						StartLayerContentsForm(Layer);
+						if (IsKeepoutLayer(Layer.number))
+						{
+							CircleKeepoutForm(Circle,KeepoutType(Layer.number));
+						}
+						else
+						{
+							CircleForm(Circle);
+						}
+					}
+				}
+				Board.rectangles(Rectangle)
+				{
+					if (Rectangle.layer==Layer.number)
+					{
+						StartLayerContentsForm(Layer);
+						if (IsKeepoutLayer(Layer.number))
+						{
+							RectangleKeepoutForm(Rectangle,KeepoutType(Layer.number));
+						}
+						else
+						{
+							RectangleForm(Rectangle,false);
+						}
+					}
+				}
+				Board.polygons(Poly)
+				{
+					if (Poly.layer==Layer.number)
+					{
+						StartLayerContentsForm(Layer);
+						if (IsKeepoutLayer(Layer.number))
+						{
+							KeepoutPolygonForm(Poly,KeepoutType(Layer.number));
+						}
+						else
+						{
+							PolygonForm(Poly);
+						}
+					}
+				}
+				Board.texts(Text)
+				{
+					if (Text.layer==Layer.number)
+					{
+						StartLayerContentsForm(Layer);
+						TextOrAttrForm(Text);
+					}
+				}
+				if (LayerFormStarted)
+				{
+					CloseForm(true);
+				}
+			}
+		}
+	}
+}
+
+void SetupFilling()
+{
+	board(Board)
+	{
+		Board.layers(Layer)
+		{
+			SetLayerFilling(Layer.number,Layer.fill);
+		}
+	}
+}
+
+void PcbDesign()
+{
+	OpenForm("pcbDesign",true);
+	WriteQuotedString("Design_1");
+	WriteLine();
+	Layers();
+	MultiLayer();
+	LayeredInfo();
+	CloseForm(true);
+}
+
+board(Board)
+{
+    string DefaultName = filesetext(Board.name, ".eip");
+	string Filename = dlgFileSave("Eagle to PCB Intermediate Format",DefaultName,"*.eip");
+	if (strlen(Filename))
+	{
+		output(Filename)
+		{
+			HeaderForm();
+			LibraryForm();
+			NetlistForm();
+			PcbDesign();
+		}
+	}
+}

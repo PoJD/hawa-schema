@@ -1,0 +1,192 @@
+//Eagle Intermediate Format Outpurt routines
+
+enum  {false,true};
+
+int IndentLevel=0;
+char ExpectSpace=false;
+char Newline=false;
+
+int Units;
+
+void Write(string String)
+{
+	if (strchr(String,'"')!=-1 ||
+	    strchr(String,'%')!=-1 ||
+	    strchr(String,'`')!=-1 )
+	{
+	    string OutputString;
+		string Temp=String;
+		int Index=strchr(Temp,'`');
+		while(Index!=-1)
+		{
+		    OutputString = OutputString + strsub(Temp,0,Index);
+		    OutputString = OutputString + "``";
+			Temp=strsub(Temp,Index+1);
+			Index=strchr(Temp,'`');
+		}
+		
+	    OutputString = OutputString + Temp;
+	    
+	    Temp = OutputString;
+	    OutputString = "";
+	    
+		Index=strchr(Temp,'"');
+		while(Index!=-1)
+		{
+		    OutputString = OutputString + strsub(Temp,0,Index);
+		    OutputString = OutputString + "`\"";
+			Temp=strsub(Temp,Index+1);
+			Index=strchr(Temp,'"');
+		}
+		
+	    OutputString = OutputString + Temp;
+	    
+	    Temp = OutputString;
+	    OutputString = "";
+	    
+		Index=strchr(Temp,'%');
+		while(Index!=-1)
+		{
+		    OutputString = OutputString + strsub(Temp,0,Index);
+		    OutputString = OutputString + "%%";
+			Temp=strsub(Temp,Index+1);
+			Index=strchr(Temp,'%');
+		}
+		
+	    OutputString = OutputString + Temp;
+	    
+		printf(OutputString);
+	}
+	else
+	{
+		printf(String);
+	}
+	ExpectSpace = true;
+}
+
+void WriteSpace()
+{
+	if (Newline)
+	{
+		int i;
+		for (i=0;i<IndentLevel;i++)
+		{
+			Write("\t");
+		}
+		Newline = false;
+	}
+	else
+	if (ExpectSpace)
+	{
+		Write(" ");
+	}
+}
+
+void WriteLine()
+{
+	Write("\n");
+	ExpectSpace = false;
+	Newline = true;
+}
+
+void OpenBlankForm(char MultiLine)
+{
+	WriteSpace();
+	if (MultiLine)
+	{
+		IndentLevel++;
+	}
+	Write("(");
+}
+
+void OpenForm(string Name, char MultiLine)
+{
+	OpenBlankForm(MultiLine);
+	Write(Name);
+}
+
+void CloseForm(char MultiLine)
+{
+	if (MultiLine)
+	{
+		IndentLevel--;
+		WriteSpace();
+	}
+	Write(")");
+	if (MultiLine)
+	{
+		WriteLine();
+	}
+}
+
+void WriteLength(int Length)
+{
+	WriteSpace();
+
+	real Value;
+	switch (Units)
+	{
+		case GRID_UNIT_MM :
+		Value = u2mm(Length);
+		break;
+
+		case GRID_UNIT_MIL :
+		Value = u2mil(Length);
+		break;
+
+		case GRID_UNIT_INCH :
+		Value = u2inch(Length);
+		break;
+
+		case GRID_UNIT_MIC :
+		Value = u2mic(Length);
+		break;
+
+	}
+	string String;
+	sprintf(String,"%f",Value); //33668
+	Write(String);
+}
+
+void WriteInt(int Number)
+{
+	WriteSpace();
+	string String;
+	sprintf(String,"%d",Number);
+	Write(String);
+}
+
+void WriteReal(real Number)
+{
+	WriteSpace();
+	string String;
+	sprintf(String,"%f",Number); //33668
+	Write(String);
+}
+
+void WriteQuotedString(string String)
+{
+	WriteSpace();
+	
+	printf("\"");
+	Write(String);
+	printf("\"");
+}
+
+void WriteString(string String)
+{
+	WriteSpace();
+	
+	Write(String);
+}
+
+void Indent()
+{
+	IndentLevel++;
+}
+
+void UnIndent()
+{
+	IndentLevel--;
+}
+

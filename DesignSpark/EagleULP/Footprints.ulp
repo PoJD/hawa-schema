@@ -1,0 +1,251 @@
+//Eagle Intermediate Format Footprint routines
+
+void DrilledPadInfo(UL_PAD Pad)
+{
+	string Style;
+	OpenForm("padStyleRef",false);
+	Style = FindPadStyle(Pad.shape[LAYER_TOP],Pad.diameter[LAYER_TOP],0,Pad.drill,0,Pad.elongation,Pad.angle,0,0,0);
+	WriteString(Style);
+	CloseForm(false);
+}
+
+void NonDrilledPadInfo(UL_SMD Pad)
+{
+	string Style;
+	int ShapeType=PadShapeRectangle;
+	int Roundness=Pad.roundness;
+	if (Roundness!=0)
+	{
+		if (Roundness==100)
+		{
+			if (Pad.dx==Pad.dy)
+			{
+				ShapeType=PAD_SHAPE_ROUND;
+				Roundness=0;
+			}
+			else
+			{
+				ShapeType=PadShapeSmdOval;
+			}
+		}
+		else
+		{
+			ShapeType=PadShapeRoundedRectangle;
+		}
+	}
+	
+	OpenForm("padStyleRef",false);
+	Style = FindPadStyle(ShapeType,Pad.dx,Pad.dy,0,Pad.layer,0,Pad.angle,0,0,Roundness);
+	WriteString(Style);
+	CloseForm(false);
+}
+
+void HoleForm(UL_HOLE Hole)
+{
+	OpenForm("hole",false);
+
+	OpenForm("holeStyleRef",false);
+	WriteQuotedString(FindPadStyle(PAD_SHAPE_ROUND,Hole.diameter[LAYER_TSTOP],0,Hole.drill,0,0,0.0,0,0,0));
+	CloseForm(false);
+
+	OpenForm("pt",false);
+	WriteLength(Hole.x);
+	WriteLength(Hole.y);
+	CloseForm(false);
+
+	CloseForm(false);
+	WriteLine();
+}
+
+void FootprintLayeredData(UL_PACKAGE Footprint,UL_LAYER Layer)
+{
+	int MappedLayer = MapLayer(Layer.number);
+	if (MappedLayer>0)
+	{
+		LayerFormStarted = false;
+		Footprint.wires(Line)
+		{
+			if (Line.layer==Layer.number)
+			{
+				if (Line.arc)
+				{
+					StartLayerContentsForm(Layer);
+					ArcForm(Line.arc,"");
+				}
+				else
+			    {
+					StartLayerContentsForm(Layer);
+					if (IsKeepoutLayer(Layer.number))
+					{
+						LineForm(Line,"",KeepoutType(Layer.number));
+					}
+					else
+					{
+						LineForm(Line,"","");
+					}
+				}
+			}
+		}
+		Footprint.circles(Circle)
+		{
+			if (Circle.layer==Layer.number)
+			{
+				StartLayerContentsForm(Layer);
+				if (IsKeepoutLayer(Layer.number))
+				{
+					CircleKeepoutForm(Circle,KeepoutType(Layer.number));
+				}
+				else
+				{
+					CircleForm(Circle);
+				}
+			}
+		}
+		Footprint.rectangles(Rectangle)
+		{
+			if (Rectangle.layer==Layer.number)
+			{
+				StartLayerContentsForm(Layer);
+				if (IsKeepoutLayer(Layer.number))
+				{
+					RectangleKeepoutForm(Rectangle,KeepoutType(Layer.number));
+				}
+				else
+				{
+					RectangleForm(Rectangle,false);
+				}
+			}
+		}
+		Footprint.polygons(Polygon)
+		{
+			if (Polygon.layer==Layer.number)
+			{
+				StartLayerContentsForm(Layer);
+				PolygonForm(Polygon);
+			}
+		}
+		Footprint.texts(Text)
+		{
+			if (Text.layer==Layer.number)
+			{
+				StartLayerContentsForm(Layer);
+				TextOrAttrForm(Text);
+			}
+		}
+		if (LayerFormStarted)
+		{
+			CloseForm(true);
+		}			
+	}
+}
+
+void FootprintLayeredInfo(UL_PACKAGE Footprint)
+{
+	if (board)
+	{
+		board(Board)
+		{
+			Board.layers(Layer)
+			{
+				FootprintLayeredData(Footprint,Layer);
+			}
+		}
+	}
+	else
+	{
+		library(Library)
+		{
+			Library.layers(Layer)
+			{
+				FootprintLayeredData(Footprint,Layer);
+			}
+		}
+	}
+}
+
+void FootprintForm(UL_PACKAGE Footprint)
+{
+	OpenForm("patternDef",true);
+	WriteQuotedString(Footprint.name);
+
+	OpenForm("originalName",false);
+	WriteQuotedString(Footprint.name);
+	CloseForm(false);
+	WriteLine();
+
+	int PadNumber=1;
+	OpenForm("multiLayer",true);
+	WriteLine();
+	Footprint.contacts(Pad)
+	{
+		OpenForm("pad",false);
+
+		OpenForm("padNum",false);
+		WriteInt(PadNumber);
+		CloseForm(false);
+
+		if (Pad.pad)
+		{
+			DrilledPadInfo(Pad.pad);
+		}
+		else
+		{
+			NonDrilledPadInfo(Pad.smd);
+		}
+
+		OpenForm("pt",false);
+		WriteLength(Pad.x);
+		WriteLength(Pad.y);
+		CloseForm(false);
+
+		if (Pad.pad)
+		{
+			if (Pad.pad.shape[LAYER_TOP]==PAD_SHAPE_LONG)
+			{
+				if (Pad.pad.angle!=90.0)
+				{
+					OpenForm("rotation",false);
+					WriteReal(90.0-Pad.pad.angle);
+					CloseForm(false);
+				}
+			}
+		}
+		else
+		{
+			if (Pad.smd.angle!=0.0 &&
+			    Pad.smd.angle!=180.0)
+			{
+				OpenForm("rotation",false);
+				WriteReal(90.0-Pad.smd.angle);
+				CloseForm(false);
+			}
+		}
+
+		CloseForm(false);
+		WriteLine();
+
+		PadNumber++;
+	}
+	
+	Footprint.holes(Hole)
+	{
+		HoleForm(Hole);
+	}
+	
+	CloseForm(true);
+
+	FootprintLayeredInfo(Footprint);
+
+	CloseForm(true);
+}
+
+int CountPads(UL_PACKAGE Footprint)
+{
+	int Count=0;
+	Footprint.contacts(Pad)
+	{
+		Count++;
+	}
+	return(Count);
+}
+
